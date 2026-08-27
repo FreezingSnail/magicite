@@ -1,0 +1,10 @@
+{"children":[
+{"id":"a","description":"# Scope\nx\n# Files\nx.go\n# Contract\nx\n# Invariants\nx\n# Non-goals\nx\n# MACHINE\nprovides:\nconsumes: missing.symbol\nfiles: x.go\ntier: low","design":"x","acceptance":"x","labels":["difficulty:low"],"deps":[]},
+{"id":"b","description":"# Scope\nx\n# Files\nx.go\n# Contract\nx\n# Invariants\nx\n# Non-goals\nx\n# MACHINE\nprovides:\nconsumes:\nfiles: x.go\ntier: low","design":"x","acceptance":"x","labels":["difficulty:low"],"deps":[]},
+{"id":"c","description":"# Scope\nx\n# Files\nx.go\n# Contract\nx\n# Invariants\nx\n# Non-goals\nx\n# MACHINE\nprovides:\nconsumes:\nfiles: x.go\ntier: low","design":"x","acceptance":"x","labels":["difficulty:low"],"deps":[]},
+{"id":"d","description":"# Scope\nx\n# Files\nx.go\n# Contract\nx\n# Invariants\nx\n# Non-goals\nx\n# MACHINE\nprovides:\nconsumes:\nfiles: x.go\ntier: low","design":"x","acceptance":"x","labels":["difficulty:low"],"deps":[]},
+{"id":"e","description":"# Scope\nx\n# Files\nx.go\n# Contract\nx\n# Invariants\nx\n# Non-goals\nx\n# MACHINE\nprovides:\nconsumes:\nfiles: x.go\ntier: low","design":"x","acceptance":"x","labels":["difficulty:low"],"deps":[]},
+{"id":"f","description":"# Scope\nx\n# Files\nx.go\n# Contract\nx\n# Invariants\nx\n# Non-goals\nx\n# MACHINE\nprovides:\nconsumes:\nfiles: x.go\ntier: low","design":"x","acceptance":"x","labels":["difficulty:low"],"deps":[]},
+{"id":"g","description":"# Scope\nx\n# Files\nx.go\n# Contract\nx\n# Invariants\nx\n# Non-goals\nx\n# MACHINE\nprovides:\nconsumes:\nfiles: x.go\ntier: low","design":"x","acceptance":"x","labels":["difficulty:low"],"deps":[]},
+{"id":"h","description":"# Scope\nx\n# Files\nx.go\n# Contract\nx\n# Invariants\nx\n# Non-goals\nx\n# MACHINE\nprovides:\nconsumes:\nfiles: x.go\ntier: low","design":"x","acceptance":"x","labels":["difficulty:low"],"deps":[]}
+],"expect":[{"id":"a","rule":"unprovided-symbol"}]}
