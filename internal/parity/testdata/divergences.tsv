@@ -1,0 +1,3 @@
+# target	reason	owner-bead
+cockpit	Magicite is headless and does not reproduce the Emacs cockpit UI.	magicite-5o2.2
+terminal	Magicite is headless and does not reproduce the Emacs terminal UI.	magicite-5o2.2
