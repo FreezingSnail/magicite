@@ -113,12 +113,14 @@ func (d *Dispatcher) Tick(ctx context.Context) {
 		return
 	}
 	readyByRepo := make(map[repo.Repo][]ReadyEntry, len(repositories))
+	readyRepos := make([]repo.Repo, 0, len(repositories))
 	for _, result := range ready {
 		if result.err != nil {
 			d.RepoWarn(result.Item, result.err.Error())
 			continue
 		}
 		d.RepoOK(result.Item)
+		readyRepos = append(readyRepos, result.Item)
 		for _, entry := range result.Value {
 			if normalized, ok := NormalizeReady(result.Item, entry); ok {
 				readyByRepo[result.Item] = append(readyByRepo[result.Item], normalized)
@@ -155,6 +157,22 @@ func (d *Dispatcher) Tick(ctx context.Context) {
 		}
 		d.Implement(ctx, entry.Repo, entry.Task)
 	}
+
+	openEpics, complete := fanOut(ctx, readyRepos, d.beads.OpenEpics)
+	if !complete || ctx.Err() != nil {
+		return
+	}
+	repoEpics := make([]RepoEpics, 0, len(openEpics))
+	for _, result := range openEpics {
+		if result.err != nil {
+			d.RepoWarn(result.Item, result.err.Error())
+			continue
+		}
+		d.RepoOK(result.Item)
+		repoEpics = append(repoEpics, RepoEpics{Repo: result.Item, Epics: result.Value})
+	}
+	d.EpicPasses(ctx, repoEpics)
+
 	d.log(logging.Debug, "tick", map[string]any{
 		"repos": len(repositories), "ready": len(merged), "rework": rework,
 		"held": held, "sessions": len(d.Sessions()),

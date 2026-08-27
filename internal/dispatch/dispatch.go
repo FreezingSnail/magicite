@@ -75,6 +75,13 @@ func New(deps Deps) (*Dispatcher, error) {
 	if deps.Logger == nil {
 		deps.Logger = logging.Event
 	}
+	logger := deps.Logger
+	var logMu sync.Mutex
+	log := func(level logging.Level, kind string, fields map[string]any) {
+		logMu.Lock()
+		defer logMu.Unlock()
+		logger(level, kind, fields)
+	}
 	return &Dispatcher{
 		beads:        deps.Beads,
 		workspaces:   deps.Workspaces,
@@ -84,7 +91,7 @@ func New(deps Deps) (*Dispatcher, error) {
 		gate:         deps.Gate,
 		clock:        deps.Clock,
 		config:       deps.Config,
-		log:          deps.Logger,
+		log:          log,
 		sessions:     make(map[string]Session),
 		repoWarnedAt: make(map[string]time.Time),
 	}, nil
