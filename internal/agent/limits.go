@@ -14,6 +14,7 @@ var limitPhrases = []string{
 	"usage limit",
 	"usage exceeded",
 	"rate limit",
+	"rate-limit",
 	"too many requests",
 	"429",
 	"quota",
