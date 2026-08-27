@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/repo"
 	"github.com/FreezingSnail/magicite/internal/server"
 )
 
@@ -57,7 +58,7 @@ func serve(ctx context.Context, args []string, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "load config: %v\n", err)
 		return 1
 	}
-	if err := server.Serve(ctx, *socket, cfg, nil); err != nil {
+	if err := server.Serve(ctx, *socket, cfg, nil, repo.New(cfg)); err != nil {
 		fmt.Fprintf(stderr, "serve: %v\n", err)
 		return 1
 	}

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/repotest"
 	"github.com/FreezingSnail/magicite/internal/server"
 )
 
@@ -30,7 +31,7 @@ func TestStatusJSONAndUnreachableExit(t *testing.T) {
 	socket := cliSocket(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- server.Serve(ctx, socket, config.Default(), nil) }()
+	go func() { done <- server.Serve(ctx, socket, config.Default(), nil, repotest.New()) }()
 	defer func() {
 		cancel()
 		select {

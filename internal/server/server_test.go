@@ -14,6 +14,8 @@ import (
 
 	"github.com/FreezingSnail/magicite/internal/config"
 	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/repotest"
 	"github.com/FreezingSnail/magicite/internal/state"
 )
 
@@ -29,12 +31,16 @@ func testSocket(t *testing.T) string {
 	return path
 }
 
-func startServer(t *testing.T) (context.CancelFunc, string, <-chan error) {
+func startServer(t *testing.T, lookups ...repo.Lookup) (context.CancelFunc, string, <-chan error) {
 	t.Helper()
+	lookup := repo.Lookup(repotest.New())
+	if len(lookups) > 0 {
+		lookup = lookups[0]
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	socket := testSocket(t)
 	done := make(chan error, 1)
-	go func() { done <- Serve(ctx, socket, config.Default(), state.Default()) }()
+	go func() { done <- Serve(ctx, socket, config.Default(), state.Default(), lookup) }()
 	deadline := time.Now().Add(time.Second)
 	for {
 		if _, err := os.Stat(socket); err == nil {
@@ -149,5 +155,68 @@ func TestServeRemovesSocketOnCancellation(t *testing.T) {
 	stopServer(t, cancel, done)
 	if _, err := os.Stat(socket); !os.IsNotExist(err) {
 		t.Fatalf("socket remains after shutdown: %v", err)
+	}
+}
+
+func TestServeReposAndRoute(t *testing.T) {
+	first, ok := repo.Make("first", "first", "first", "trunk")
+	if !ok {
+		t.Fatal("first repository is invalid")
+	}
+	second, ok := repo.Make("second", "second", "second", "main")
+	if !ok {
+		t.Fatal("second repository is invalid")
+	}
+	lookup := repotest.New(first, second)
+	cancel, socket, done := startServer(t, lookup)
+	defer stopServer(t, cancel, done)
+
+	conn := clientRequest(t, socket, "repos")
+	defer conn.Close()
+	var listed struct {
+		Repos []RepoView `json:"repos"`
+	}
+	if err := json.NewDecoder(conn).Decode(&listed); err != nil {
+		t.Fatal(err)
+	}
+	if len(listed.Repos) != 2 || listed.Repos[0] != (RepoView{Name: first.Name, Root: first.Root, Prefix: first.Prefix, Branch: first.Branch}) || listed.Repos[1] != (RepoView{Name: second.Name, Root: second.Root, Prefix: second.Prefix, Branch: second.Branch}) {
+		t.Fatalf("repos = %+v", listed.Repos)
+	}
+	if got := lookup.Refreshes(); got != 1 {
+		t.Fatalf("refreshes = %d, want 1", got)
+	}
+
+	route, err := net.Dial("unix", socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer route.Close()
+	if err := json.NewEncoder(route).Encode(request{Command: "route", ID: "second-123"}); err != nil {
+		t.Fatal(err)
+	}
+	var routed struct {
+		Repo RepoView `json:"repo"`
+	}
+	if err := json.NewDecoder(route).Decode(&routed); err != nil {
+		t.Fatal(err)
+	}
+	if routed.Repo != (RepoView{Name: second.Name, Root: second.Root, Prefix: second.Prefix, Branch: second.Branch}) {
+		t.Fatalf("route = %+v", routed.Repo)
+	}
+
+	missing, err := net.Dial("unix", socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer missing.Close()
+	if err := json.NewEncoder(missing).Encode(request{Command: "route", ID: "missing-123"}); err != nil {
+		t.Fatal(err)
+	}
+	var notFound map[string]string
+	if err := json.NewDecoder(missing).Decode(&notFound); err != nil {
+		t.Fatal(err)
+	}
+	if notFound["error"] != "not found" {
+		t.Fatalf("route error = %+v", notFound)
 	}
 }

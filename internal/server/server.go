@@ -15,15 +15,18 @@ import (
 
 	"github.com/FreezingSnail/magicite/internal/config"
 	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/repo"
 	"github.com/FreezingSnail/magicite/internal/state"
 )
+
+const repoTimeout = 30 * time.Second
 
 const statusKey = "magicite.server.status"
 
 // Serve listens on socket until ctx is cancelled. It owns the socket for its
 // lifetime, exposes status and tail requests, and broadcasts logging events to
 // tail subscribers without allowing a slow subscriber to block event producers.
-func Serve(ctx context.Context, socket string, cfg config.Config, store *state.Store) error {
+func Serve(ctx context.Context, socket string, cfg config.Config, store *state.Store, repos repo.Lookup) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -32,6 +35,9 @@ func Serve(ctx context.Context, socket string, cfg config.Config, store *state.S
 	}
 	if store == nil {
 		store = state.Default()
+	}
+	if repos == nil {
+		repos = repo.New(cfg)
 	}
 	if err := prepareSocket(socket); err != nil {
 		return err
@@ -48,8 +54,10 @@ func Serve(ctx context.Context, socket string, cfg config.Config, store *state.S
 	}
 
 	d := &daemon{
+		ctx:      ctx,
 		listener: listener,
 		store:    store,
+		repos:    repos,
 		status: Status{
 			State:   "running",
 			PID:     os.Getpid(),
@@ -62,6 +70,14 @@ func Serve(ctx context.Context, socket string, cfg config.Config, store *state.S
 	store.Put(statusKey, d.status)
 	logging.Configure(logging.Config{Level: logging.Debug, Format: logging.JSON, Writer: io.MultiWriter(os.Stderr, d)})
 	logging.Event(logging.Info, "serve.started", map[string]any{"socket": socket})
+	refreshCtx, cancelRefresh := context.WithTimeout(ctx, repoTimeout)
+	discovered := repos.Refresh(refreshCtx)
+	cancelRefresh()
+	if len(discovered) == 0 {
+		logging.Event(logging.Warn, "repos.discovered", map[string]any{"count": 0, "reason": "none-admitted"})
+	} else {
+		logging.Event(logging.Info, "repos.discovered", map[string]any{"count": len(discovered), "names": repoNames(discovered)})
+	}
 
 	defer func() {
 		logging.Event(logging.Info, "serve.stopped", nil)
@@ -100,11 +116,14 @@ type Status struct {
 
 type request struct {
 	Command string `json:"command"`
+	ID      string `json:"id"`
 }
 
 type daemon struct {
+	ctx      context.Context
 	listener *net.UnixListener
 	store    *state.Store
+	repos    repo.Lookup
 	status   Status
 
 	mu          sync.Mutex
@@ -162,6 +181,27 @@ func (d *daemon) handle(conn net.Conn) {
 	switch request.Command {
 	case "status":
 		_ = json.NewEncoder(conn).Encode(d.currentStatus())
+	case "repos":
+		requestCtx, cancel := context.WithTimeout(d.ctx, repoTimeout)
+		defer cancel()
+		_ = json.NewEncoder(conn).Encode(struct {
+			Repos []RepoView `json:"repos"`
+		}{Repos: repoViews(d.repos.List(requestCtx))})
+	case "route":
+		requestCtx, cancel := context.WithTimeout(d.ctx, repoTimeout)
+		defer cancel()
+		record, err := d.repos.ForBead(requestCtx, request.ID)
+		if repo.IsNotFound(err) {
+			_ = json.NewEncoder(conn).Encode(map[string]string{"error": "not found"})
+			return
+		}
+		if err != nil {
+			_ = json.NewEncoder(conn).Encode(map[string]string{"error": err.Error()})
+			return
+		}
+		_ = json.NewEncoder(conn).Encode(struct {
+			Repo RepoView `json:"repo"`
+		}{Repo: repoViews([]repo.Repo{record})[0]})
 	case "tail":
 		subscriber := d.subscribe(conn)
 		defer d.drop(subscriber)
