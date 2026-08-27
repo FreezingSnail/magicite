@@ -117,6 +117,9 @@ func (d *Dispatcher) landed(ctx context.Context, session Session, closeOutput st
 }
 
 func (d *Dispatcher) fail(ctx context.Context, session Session, outcome Outcome) {
+	if d.FallbackRetry(ctx, session, session.Handle, outcome) {
+		return
+	}
 	if session.Role == Reviewer {
 		d.abortReview(ctx, session, string(outcome))
 		return

@@ -121,10 +121,17 @@ func (d *Dispatcher) spawnSession(ctx context.Context, repository repo.Repo, tas
 	if model != "" {
 		resolution.Model = model
 	}
+	return d.spawnSessionWithResolution(ctx, repository, task, role, seat, plan, resolution.Agent, resolution, difficulty, false, true)
+}
+
+func (d *Dispatcher) spawnSessionWithResolution(ctx context.Context, repository repo.Repo, task string, role Role, seat, plan, agent string, resolution config.Resolution, difficulty string, fallbackAttempted, reportFailure bool) string {
+	var err error
 	if plan == "" {
 		plan, err = d.PlanFor(ctx, repository, role, task, seat)
 		if err != nil {
-			d.dispatchFailed(ctx, repository, task, role, seat, err)
+			if reportFailure {
+				d.dispatchFailed(ctx, repository, task, role, seat, err)
+			}
 			return ""
 		}
 	}
@@ -132,7 +139,9 @@ func (d *Dispatcher) spawnSession(ctx context.Context, repository repo.Repo, tas
 	if role != Reviewer {
 		workdir, err = d.workspaces.Path(repository, seat)
 		if err != nil {
-			d.dispatchFailed(ctx, repository, task, role, seat, err)
+			if reportFailure {
+				d.dispatchFailed(ctx, repository, task, role, seat, err)
+			}
 			return ""
 		}
 	}
@@ -140,7 +149,7 @@ func (d *Dispatcher) spawnSession(ctx context.Context, repository repo.Repo, tas
 		Workdir: workdir,
 		Backend: resolution.Backend,
 		Model:   resolution.Model,
-		Agent:   resolution.Agent,
+		Agent:   agent,
 		Effort:  resolution.Effort,
 		Plan:    plan,
 	})
@@ -148,13 +157,16 @@ func (d *Dispatcher) spawnSession(ctx context.Context, repository repo.Repo, tas
 		if err == nil {
 			err = errors.New("dispatch: runner returned empty handle")
 		}
-		d.dispatchFailed(ctx, repository, task, role, seat, err)
+		if reportFailure {
+			d.dispatchFailed(ctx, repository, task, role, seat, err)
+		}
 		return ""
 	}
 	d.Add(Session{
 		Handle: handle, Repo: repository, Task: task, Role: role, Seat: seat,
 		Backend: resolution.Backend, Model: resolution.Model, Difficulty: difficulty,
-		Effort: resolution.Effort, Agent: resolution.Agent, Status: Working,
+		Effort: resolution.Effort, Agent: agent, Status: Working,
+		FallbackAttempted: fallbackAttempted,
 	})
 	fields := dispatchFields(repository, task, role, seat)
 	fields["backend"] = resolution.Backend
