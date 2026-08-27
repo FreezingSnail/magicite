@@ -1,0 +1,14 @@
+[
+  {
+    "id": "magicite-e84.2",
+    "title": "typed decode",
+    "dependencies": [
+      {
+        "id": "magicite-e84.1",
+        "title": "bd client",
+        "status": "closed",
+        "dependency_type": "blocks"
+      }
+    ]
+  }
+]

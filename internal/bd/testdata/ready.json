@@ -1,0 +1,22 @@
+[
+  {
+    "id": "magicite-e84.2",
+    "title": "typed decode",
+    "description": "parse bd stdout",
+    "design": "keep parsing pure",
+    "acceptance_criteria": "decode JSON",
+    "status": "in_progress",
+    "priority": 1,
+    "issue_type": "task",
+    "assignee": "FreezingSnail",
+    "owner": "FreezingSnail",
+    "parent": "magicite-e84",
+    "created_at": "2026-08-27T09:00:00Z",
+    "updated_at": "2026-08-27T09:01:00Z",
+    "started_at": "2026-08-27T09:02:00Z",
+    "dependency_count": 1,
+    "dependent_count": 2,
+    "comment_count": 3,
+    "unknown_future_field": true
+  }
+]

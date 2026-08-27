@@ -1,0 +1,14 @@
+[
+  {
+    "id": "magicite-e84.1",
+    "title": "bd client",
+    "status": "closed",
+    "dependency_type": "blocks"
+  },
+  {
+    "id": "magicite-e84",
+    "title": "bd bridge",
+    "status": "open",
+    "dependency_type": "parent-child"
+  }
+]
