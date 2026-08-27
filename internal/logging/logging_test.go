@@ -70,6 +70,25 @@ func TestEventThresholdAndTextFormat(t *testing.T) {
 	}
 }
 
+type panickingWriter struct{}
+
+func (panickingWriter) Write([]byte) (int, error) {
+	panic("bad writer")
+}
+
+func TestEventInvalidFormatAndWriterPanicDoNotEscape(t *testing.T) {
+	var output bytes.Buffer
+	Configure(Config{Level: Debug, Format: Format(255), Writer: &output})
+
+	Event(Info, "configured", nil)
+	if line := output.String(); !strings.HasPrefix(line, "sequence=") || strings.Count(line, "\n") != 1 {
+		t.Fatalf("invalid-format record = %q", line)
+	}
+
+	Configure(Config{Level: Debug, Format: JSON, Writer: panickingWriter{}})
+	Event(Info, "writer-panic", nil)
+}
+
 func TestEventOrdering(t *testing.T) {
 	var output bytes.Buffer
 	Configure(Config{Level: Debug, Format: JSON, Writer: &output})
