@@ -32,6 +32,20 @@ const (
 	LevelError = Error
 )
 
+// Canonical event kinds describe orchestrator lifecycle activity. Callers may
+// use additional kinds when an event does not fit this vocabulary.
+const (
+	KindPickup   = "pickup"
+	KindComplete = "complete"
+	KindLand     = "land"
+	KindClose    = "close"
+	KindReview   = "review"
+	KindVerdict  = "verdict"
+	KindRecovery = "recovery"
+	KindWarn     = "warn"
+	KindError    = "error"
+)
+
 func (level Level) String() string {
 	switch level {
 	case Debug:

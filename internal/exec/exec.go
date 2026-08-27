@@ -30,26 +30,15 @@ func Run(ctx context.Context, dir, name string, args ...string) (stdout, stderr 
 		return nil, nil, -1, &Error{err: err}
 	}
 
-	cmd := osexec.Command(name, args...)
+	cmd := osexec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
 	cmd.Env = []string{}
-	configureProcessGroup(cmd)
 
 	var out, errOut bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &errOut
 
-	if err := cmd.Start(); err != nil {
-		return nil, nil, -1, &Error{err: err}
-	}
-	stopTermination := context.AfterFunc(ctx, func() {
-		_ = Terminate(context.Background(), cmd.Process)
-	})
-	err := cmd.Wait()
-	stopTermination()
-	if cleanupErr := Terminate(context.Background(), cmd.Process); cleanupErr != nil && err == nil {
-		err = cleanupErr
-	}
+	err := cmd.Run()
 	stdout, stderr = out.Bytes(), errOut.Bytes()
 	if err == nil {
 		return stdout, stderr, 0, nil
