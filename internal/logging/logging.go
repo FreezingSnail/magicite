@@ -85,13 +85,19 @@ type Config struct {
 	Writer io.Writer
 }
 
-type logger struct {
+// Logger records structured events independently from the package default.
+type Logger struct {
 	mu     sync.Mutex
 	config Config
 	next   uint64
 }
 
-var defaultLogger = logger{
+// New creates an independent logger with config.
+func New(config Config) *Logger {
+	return &Logger{config: normalizeConfig(config)}
+}
+
+var defaultLogger = Logger{
 	config: Config{Level: Info, Format: Text, Writer: os.Stderr},
 }
 
@@ -128,28 +134,33 @@ func SetWriter(writer io.Writer) {
 	defaultLogger.config.Writer = writer
 }
 
+// Event records one lifecycle event through the package default logger.
+func Event(level Level, kind string, fields map[string]any) {
+	defaultLogger.Event(level, kind, fields)
+}
+
 // Event records one lifecycle event. Logging failures are ignored so logging
 // cannot interrupt a caller's lifecycle path.
-func Event(level Level, kind string, fields map[string]any) {
+func (l *Logger) Event(level Level, kind string, fields map[string]any) {
 	defer func() { _ = recover() }()
 
-	defaultLogger.mu.Lock()
-	defer defaultLogger.mu.Unlock()
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
-	if normalizeLevel(level) < defaultLogger.config.Level {
+	if normalizeLevel(level) < l.config.Level {
 		return
 	}
 
-	defaultLogger.next++
+	l.next++
 	record := eventRecord{
-		Sequence: defaultLogger.next,
+		Sequence: l.next,
 		Level:    normalizeLevel(level).String(),
 		Kind:     kind,
 		Fields:   renderFields(fields),
 	}
-	line := renderRecord(record, defaultLogger.config.Format)
-	if defaultLogger.config.Writer != nil {
-		_, _ = defaultLogger.config.Writer.Write(append(line, '\n'))
+	line := renderRecord(record, l.config.Format)
+	if l.config.Writer != nil {
+		_, _ = l.config.Writer.Write(append(line, '\n'))
 	}
 }
 
