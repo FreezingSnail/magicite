@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/FreezingSnail/magicite/internal/dispatch"
 	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
@@ -48,23 +49,23 @@ func (g *Gate) EpicGoal(ctx context.Context, r repo.Repo, epic string) (string, 
 }
 
 // ReviewPlan builds the reviewer plan and carries its configured session settings.
-func (g *Gate) ReviewPlan(ctx context.Context, r repo.Repo, epic string) (Plan, error) {
+func (g *Gate) ReviewPlan(ctx context.Context, r repo.Repo, epic string) (dispatch.RunSpec, error) {
 	if _, ok := g.key(r, epic); !ok {
-		return Plan{}, fmt.Errorf("gate: invalid review target")
+		return dispatch.RunSpec{}, fmt.Errorf("gate: invalid review target")
 	}
 	if !g.config.Enabled {
-		return Plan{}, fmt.Errorf("gate: review disabled")
+		return dispatch.RunSpec{}, fmt.Errorf("gate: review disabled")
 	}
 	diff, err := g.EpicDiff(ctx, r, epic)
 	if err != nil {
-		return Plan{}, err
+		return dispatch.RunSpec{}, err
 	}
 	goal, err := g.EpicGoal(ctx, r, epic)
 	if err != nil {
-		return Plan{}, err
+		return dispatch.RunSpec{}, err
 	}
-	return Plan{
-		Text:  BuildPlan(diff, goal),
+	return dispatch.RunSpec{
+		Plan:  BuildPlan(diff, goal),
 		Model: g.config.Model,
 		Agent: g.config.Agent,
 	}, nil

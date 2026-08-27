@@ -35,26 +35,25 @@ func (g *Gate) NoteSession(handle string, r repo.Repo, epic string) {
 }
 
 // CompleteReview dispatches the parsed verdict from a tracked review session.
-func (g *Gate) CompleteReview(ctx context.Context, handle, transcript string) (Verdict, error) {
+func (g *Gate) CompleteReview(ctx context.Context, handle, transcript string) error {
 	k, ok := g.drop(handle)
 	if !ok {
 		g.warn("untracked-review", handle)
-		return Verdict{}, nil
+		return nil
 	}
 	r, ok := g.repos.Get(k.repo)
 	if !ok {
 		g.warn("vanished-repo", k.repo)
-		return Verdict{}, nil
+		return nil
 	}
-	v := ParseVerdict(transcript)
-	return v, g.DispatchVerdict(ctx, r, k.epic, v)
+	return g.DispatchVerdict(ctx, r, k.epic, ParseVerdict(transcript))
 }
 
 // AbortReview records an aborted review and leaves its epic open.
-func (g *Gate) AbortReview(ctx context.Context, handle, reason string) (string, error) {
+func (g *Gate) AbortReview(ctx context.Context, handle, reason string) error {
 	k, ok := g.drop(handle)
 	if !ok {
-		return "", nil
+		return nil
 	}
 	r, found := g.repos.Get(k.repo)
 	fields := map[string]any{"handle": handle, "reason": reason}
@@ -66,10 +65,7 @@ func (g *Gate) AbortReview(ctx context.Context, handle, reason string) (string, 
 		g.warn("vanished-repo", k.repo)
 	}
 	g.log.Event(logging.Warn, "review-abort", fields)
-	if !found {
-		return "", nil
-	}
-	return k.epic, nil
+	return nil
 }
 
 // DispatchVerdict applies one review outcome to an epic.

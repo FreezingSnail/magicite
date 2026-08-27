@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/FreezingSnail/magicite/internal/decomp"
 	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
@@ -31,4 +32,6 @@ func (PermissiveGate) CompleteReview(context.Context, string, string) error { re
 
 func (PermissiveGate) AbortReview(context.Context, string, string) error { return nil }
 
-func (PermissiveGate) DecompositionVerdict(context.Context, repo.Repo, string) error { return nil }
+func (PermissiveGate) DecompositionVerdict(context.Context, repo.Repo, string) ([]decomp.Violation, error) {
+	return nil, nil
+}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/FreezingSnail/magicite/internal/decomp"
 	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
@@ -135,7 +136,7 @@ type Gate interface {
 	NoteSession(string, repo.Repo, string)
 	CompleteReview(context.Context, string, string) error
 	AbortReview(context.Context, string, string) error
-	DecompositionVerdict(context.Context, repo.Repo, string) error
+	DecompositionVerdict(context.Context, repo.Repo, string) ([]decomp.Violation, error)
 }
 
 // Ticker supplies timer events and can be stopped.

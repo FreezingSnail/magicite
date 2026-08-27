@@ -45,9 +45,9 @@ func TestCompleteReviewApprovedClosesClearsAndDeduplicates(t *testing.T) {
 	k, _ := g.key(r, "epic")
 	g.recordStart(k, "sha")
 	g.exhaust(k)
-	v, err := g.CompleteReview(context.Background(), "review", "REVIEW: APPROVED")
-	if err != nil || v.Kind != VerdictApproved {
-		t.Fatalf("CompleteReview() = (%#v, %v)", v, err)
+	err := g.CompleteReview(context.Background(), "review", "REVIEW: APPROVED")
+	if err != nil {
+		t.Fatalf("CompleteReview() error = %v", err)
 	}
 	calls := beads.Calls()
 	if len(calls) != 1 || calls[0].method != "Close" || calls[0].args[2] != approvedReviewReason {
@@ -59,9 +59,9 @@ func TestCompleteReviewApprovedClosesClearsAndDeduplicates(t *testing.T) {
 	if _, ok := g.start(k); ok {
 		t.Fatal("approved review retained start state")
 	}
-	v, err = g.CompleteReview(context.Background(), "review", "REVIEW: APPROVED")
-	if err != nil || v != (Verdict{}) || len(beads.Calls()) != 1 {
-		t.Fatalf("duplicate CompleteReview() = (%#v, %v), calls=%#v", v, err, beads.Calls())
+	err = g.CompleteReview(context.Background(), "review", "REVIEW: APPROVED")
+	if err != nil || len(beads.Calls()) != 1 {
+		t.Fatalf("duplicate CompleteReview() error = %v, calls=%#v", err, beads.Calls())
 	}
 }
 
@@ -73,9 +73,9 @@ func TestCompleteReviewCloseFailurePreservesState(t *testing.T) {
 	g.NoteSession("review", r, "epic")
 	k, _ := g.key(r, "epic")
 	g.recordStart(k, "sha")
-	v, err := g.CompleteReview(context.Background(), "review", "REVIEW: APPROVED")
-	if v.Kind != VerdictApproved || !errors.Is(err, want) {
-		t.Fatalf("CompleteReview() = (%#v, %v)", v, err)
+	err := g.CompleteReview(context.Background(), "review", "REVIEW: APPROVED")
+	if !errors.Is(err, want) {
+		t.Fatalf("CompleteReview() error = %v", err)
 	}
 	if g.attempts(k) != 1 {
 		t.Fatal("failed close cleared attempt")
@@ -129,9 +129,9 @@ func TestDispatchVerdictUnparseableNeverCloses(t *testing.T) {
 	beads := &fakeBeads{}
 	g := reviewGate(t, beads, map[string]repo.Repo{r.Name: r})
 	g.NoteSession("review", r, "epic")
-	v, err := g.CompleteReview(context.Background(), "review", "no marker")
-	if err != nil || v.Kind != VerdictUnparseable {
-		t.Fatalf("CompleteReview() = (%#v, %v)", v, err)
+	err := g.CompleteReview(context.Background(), "review", "no marker")
+	if err != nil {
+		t.Fatalf("CompleteReview() error = %v", err)
 	}
 	calls := beads.Calls()
 	if len(calls) != 1 || calls[0].method != "Comment" || calls[0].args[2] != unparseableComment {
@@ -148,16 +148,16 @@ func TestAbortReviewDropsHandleAndToleratesCommentFailure(t *testing.T) {
 	beads := &fakeBeads{comment: func(context.Context, repo.Repo, string, string) error { return errors.New("comment failed") }}
 	g := reviewGate(t, beads, map[string]repo.Repo{r.Name: r})
 	g.NoteSession("review", r, "epic")
-	epic, err := g.AbortReview(context.Background(), "review", "runner failed")
-	if err != nil || epic != "epic" {
-		t.Fatalf("AbortReview() = (%q, %v)", epic, err)
+	err := g.AbortReview(context.Background(), "review", "runner failed")
+	if err != nil {
+		t.Fatalf("AbortReview() error = %v", err)
 	}
 	if calls := beads.Calls(); len(calls) != 1 || calls[0].method != "Comment" {
 		t.Fatalf("calls = %#v", calls)
 	}
-	epic, err = g.AbortReview(context.Background(), "review", "again")
-	if err != nil || epic != "" || len(beads.Calls()) != 1 {
-		t.Fatalf("duplicate AbortReview() = (%q, %v), calls=%#v", epic, err, beads.Calls())
+	err = g.AbortReview(context.Background(), "review", "again")
+	if err != nil || len(beads.Calls()) != 1 {
+		t.Fatalf("duplicate AbortReview() error = %v, calls=%#v", err, beads.Calls())
 	}
 }
 
@@ -165,11 +165,11 @@ func TestCompleteAndAbortReviewIgnoreVanishedRepository(t *testing.T) {
 	r := testRepo(t, "repo")
 	g := reviewGate(t, &fakeBeads{}, map[string]repo.Repo{})
 	g.NoteSession("complete", r, "epic")
-	if v, err := g.CompleteReview(context.Background(), "complete", "REVIEW: APPROVED"); err != nil || v != (Verdict{}) {
-		t.Fatalf("CompleteReview() = (%#v, %v)", v, err)
+	if err := g.CompleteReview(context.Background(), "complete", "REVIEW: APPROVED"); err != nil {
+		t.Fatalf("CompleteReview() error = %v", err)
 	}
 	g.NoteSession("abort", r, "epic")
-	if epic, err := g.AbortReview(context.Background(), "abort", "gone"); err != nil || epic != "" {
-		t.Fatalf("AbortReview() = (%q, %v)", epic, err)
+	if err := g.AbortReview(context.Background(), "abort", "gone"); err != nil {
+		t.Fatalf("AbortReview() error = %v", err)
 	}
 }

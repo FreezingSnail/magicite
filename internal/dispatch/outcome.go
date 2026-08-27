@@ -83,7 +83,7 @@ func (d *Dispatcher) complete(ctx context.Context, session Session) bool {
 func (d *Dispatcher) landed(ctx context.Context, session Session, closeOutput string, provenance Stamp) bool {
 	if session.Role == Designer {
 		if session.Decomposition {
-			if err := d.gate.DecompositionVerdict(ctx, session.Repo, session.Task); err != nil {
+			if _, err := d.gate.DecompositionVerdict(ctx, session.Repo, session.Task); err != nil {
 				d.log(logging.Warn, logging.KindVerdict, map[string]any{"repo": session.Repo.LogName(), "epic": session.Task, "error": err.Error()})
 			}
 		}

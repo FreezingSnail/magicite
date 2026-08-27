@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/FreezingSnail/magicite/internal/bd"
+	"github.com/FreezingSnail/magicite/internal/dispatch"
 	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
@@ -75,7 +76,7 @@ func TestReviewPlanCarriesConfigAndPropagatesDiffError(t *testing.T) {
 	g := dueGate(t, beads, Config{Enabled: true})
 	g.config.Model, g.config.Agent = "model", "agent"
 	plan, err := g.ReviewPlan(context.Background(), r, "epic")
-	if err != nil || plan.Model != "model" || plan.Agent != "agent" || !strings.Contains(plan.Text, "goal") {
+	if err != nil || plan.Model != "model" || plan.Agent != "agent" || !strings.Contains(plan.Plan, "goal") {
 		t.Fatalf("ReviewPlan() = (%+v, %v)", plan, err)
 	}
 
@@ -85,7 +86,7 @@ func TestReviewPlanCarriesConfigAndPropagatesDiffError(t *testing.T) {
 		return 1, "", wantErr
 	}}
 	plan, err = failed.ReviewPlan(context.Background(), r, "epic")
-	if !errors.Is(err, wantErr) || plan != (Plan{}) {
+	if !errors.Is(err, wantErr) || plan != (dispatch.RunSpec{}) {
 		t.Fatalf("failed ReviewPlan() = (%+v, %v)", plan, err)
 	}
 }
@@ -94,7 +95,7 @@ func TestReviewPlanRefusesDisabledGate(t *testing.T) {
 	r := testRepo(t, "repo")
 	g := dueGate(t, &fakeBeads{}, Config{})
 	plan, err := g.ReviewPlan(context.Background(), r, "epic")
-	if err == nil || plan != (Plan{}) {
+	if err == nil || plan != (dispatch.RunSpec{}) {
 		t.Fatalf("disabled ReviewPlan() = (%+v, %v), want error and empty plan", plan, err)
 	}
 }

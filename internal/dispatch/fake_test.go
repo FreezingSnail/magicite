@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FreezingSnail/magicite/internal/decomp"
 	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
@@ -317,7 +318,7 @@ type fakeGate struct {
 	reviewPlan                  func(context.Context, repo.Repo, string) (RunSpec, error)
 	noteSession                 func(string, repo.Repo, string)
 	completeReview, abortReview func(context.Context, string, string) error
-	decompositionVerdict        func(context.Context, repo.Repo, string) error
+	decompositionVerdict        func(context.Context, repo.Repo, string) ([]decomp.Violation, error)
 }
 
 var _ Gate = (*fakeGate)(nil)
@@ -376,12 +377,12 @@ func (f *fakeGate) AbortReview(c context.Context, handle, reason string) error {
 	}
 	return nil
 }
-func (f *fakeGate) DecompositionVerdict(c context.Context, r repo.Repo, epic string) error {
+func (f *fakeGate) DecompositionVerdict(c context.Context, r repo.Repo, epic string) ([]decomp.Violation, error) {
 	f.record("DecompositionVerdict", r, epic)
 	if f.decompositionVerdict != nil {
 		return f.decompositionVerdict(c, r, epic)
 	}
-	return nil
+	return nil, nil
 }
 
 type manualClock struct {
