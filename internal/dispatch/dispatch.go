@@ -3,6 +3,7 @@ package dispatch
 import (
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/FreezingSnail/magicite/internal/config"
 	"github.com/FreezingSnail/magicite/internal/logging"
@@ -44,6 +45,8 @@ type Dispatcher struct {
 	clock      Clock
 	config     config.Config
 	log        Log
+	sessionsMu sync.RWMutex
+	sessions   map[string]Session
 }
 
 // New constructs a Dispatcher after validating every port.
@@ -77,6 +80,7 @@ func New(deps Deps) (*Dispatcher, error) {
 		clock:      deps.Clock,
 		config:     deps.Config,
 		log:        deps.Logger,
+		sessions:   make(map[string]Session),
 	}, nil
 }
 

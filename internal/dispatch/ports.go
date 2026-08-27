@@ -19,11 +19,10 @@ const (
 )
 
 // Outcome is an agent session's terminal result.
-type Outcome string
+type Outcome = SessionStatus
 
 const (
 	Completed Outcome = "completed"
-	Failed    Outcome = "failed"
 	Limited   Outcome = "limited"
 )
 
