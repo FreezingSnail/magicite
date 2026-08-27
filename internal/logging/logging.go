@@ -87,18 +87,30 @@ type Config struct {
 
 // Logger records structured events independently from the package default.
 type Logger struct {
-	mu     sync.Mutex
+	mu     *sync.Mutex
 	config Config
 	next   uint64
 }
 
+var loggerInitMu sync.Mutex
+
 // New creates an independent logger with config.
 func New(config Config) *Logger {
-	return &Logger{config: normalizeConfig(config)}
+	return &Logger{mu: &sync.Mutex{}, config: normalizeConfig(config)}
 }
 
 var defaultLogger = Logger{
+	mu:     &sync.Mutex{},
 	config: Config{Level: Info, Format: Text, Writer: os.Stderr},
+}
+
+func (l *Logger) lock() *sync.Mutex {
+	loggerInitMu.Lock()
+	defer loggerInitMu.Unlock()
+	if l.mu == nil {
+		l.mu = &sync.Mutex{}
+	}
+	return l.mu
 }
 
 // Configure replaces the package logger configuration. It is safe to call
@@ -144,8 +156,9 @@ func Event(level Level, kind string, fields map[string]any) {
 func (l *Logger) Event(level Level, kind string, fields map[string]any) {
 	defer func() { _ = recover() }()
 
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	mu := l.lock()
+	mu.Lock()
+	defer mu.Unlock()
 
 	if normalizeLevel(level) < l.config.Level {
 		return
