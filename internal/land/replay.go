@@ -149,7 +149,7 @@ func (p *Pipeline) replayCommits(ctx context.Context, c *Context, revs []string,
 		commits = append(commits, replayCommit{
 			rev:     rev,
 			message: message,
-			author:  strings.TrimSpace(parts[0]) + " " + strings.TrimSpace(parts[1]),
+			author:  fmt.Sprintf("%s <%s>", strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])),
 			date:    strings.TrimSpace(parts[2]),
 		})
 		changed = changed || stamp.Apply(message, s.Trailers()) != message

@@ -106,7 +106,7 @@ func TestStampRangeReplaysCommitsWithOriginalIdentity(t *testing.T) {
 	})
 	for _, index := range []int{8, 10} {
 		args := calls[index].Args
-		if len(args) != 7 || !slices.Equal(args[:4], replayArgs(c, "commit", "-F")) || args[5] != "--author=Ada Lovelace ada@example.test" || args[6] != "--date=2026-08-27T12:00:00-04:00" {
+		if len(args) != 7 || !slices.Equal(args[:4], replayArgs(c, "commit", "-F")) || args[5] != "--author=Ada Lovelace <ada@example.test>" || args[6] != "--date=2026-08-27T12:00:00-04:00" {
 			t.Errorf("commit args = %q, want -F PATH preserved author/date", args)
 		}
 	}
