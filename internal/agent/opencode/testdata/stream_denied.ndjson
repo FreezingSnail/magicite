@@ -1,0 +1,2 @@
+{"type":"step_start","sessionID":"ses_denied"}
+{"type":"tool_use","sessionID":"ses_denied","part":{"state":{"status":"error","error":"permission denied"}}}

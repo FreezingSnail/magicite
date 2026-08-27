@@ -1,0 +1,2 @@
+{"type":"step_start","sessionID":"ses_completed"}
+{"type":"step_finish","sessionID":"ses_completed","part":{"reason":"stop"}}
