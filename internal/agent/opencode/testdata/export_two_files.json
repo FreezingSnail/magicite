@@ -1,0 +1,34 @@
+{
+  "messages": [
+    {
+      "info": {
+        "summary": {
+          "diffs": [
+            {
+              "file": "first.go",
+              "patch": "@@ -1 +1 @@\n-old\n+new\n",
+              "additions": 1,
+              "deletions": 1,
+              "status": "modified"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "info": {
+        "summary": {
+          "diffs": [
+            {
+              "file": "new.txt",
+              "patch": "@@ -0,0 +1 @@\n+new\n",
+              "additions": 1,
+              "deletions": 0,
+              "status": "added"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
