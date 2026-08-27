@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/FreezingSnail/magicite/internal/config"
 	"github.com/FreezingSnail/magicite/internal/logging"
@@ -36,17 +37,21 @@ func (e *MissingDependencyError) Error() string {
 
 // Dispatcher holds immutable external dependencies and later-owned state.
 type Dispatcher struct {
-	beads      Beads
-	workspaces Workspaces
-	lander     Lander
-	runner     Runner
-	repos      Repos
-	gate       Gate
-	clock      Clock
-	config     config.Config
-	log        Log
-	sessionsMu sync.RWMutex
-	sessions   map[string]Session
+	beads        Beads
+	workspaces   Workspaces
+	lander       Lander
+	runner       Runner
+	repos        Repos
+	gate         Gate
+	clock        Clock
+	config       config.Config
+	log          Log
+	sessionsMu   sync.RWMutex
+	sessions     map[string]Session
+	stateMu      sync.Mutex
+	tickInFlight bool
+	draining     bool
+	repoWarnedAt map[string]time.Time
 }
 
 // New constructs a Dispatcher after validating every port.
@@ -71,16 +76,17 @@ func New(deps Deps) (*Dispatcher, error) {
 		deps.Logger = logging.Event
 	}
 	return &Dispatcher{
-		beads:      deps.Beads,
-		workspaces: deps.Workspaces,
-		lander:     deps.Lander,
-		runner:     deps.Runner,
-		repos:      deps.Repos,
-		gate:       deps.Gate,
-		clock:      deps.Clock,
-		config:     deps.Config,
-		log:        deps.Logger,
-		sessions:   make(map[string]Session),
+		beads:        deps.Beads,
+		workspaces:   deps.Workspaces,
+		lander:       deps.Lander,
+		runner:       deps.Runner,
+		repos:        deps.Repos,
+		gate:         deps.Gate,
+		clock:        deps.Clock,
+		config:       deps.Config,
+		log:          deps.Logger,
+		sessions:     make(map[string]Session),
+		repoWarnedAt: make(map[string]time.Time),
 	}, nil
 }
 
