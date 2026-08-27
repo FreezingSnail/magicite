@@ -28,7 +28,7 @@ func (d *Dispatcher) OnComplete(ctx context.Context, handle string, outcome Outc
 			d.terminalFailure(ctx, session, fmt.Sprintf("session routing panicked: %v", recovered))
 		}
 		_ = d.runner.Delete(ctx, handle)
-		_ = d.Drained()
+		d.completeDrain()
 	}
 	defer deferred()
 

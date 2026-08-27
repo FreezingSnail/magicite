@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sync"
@@ -37,21 +38,30 @@ func (e *MissingDependencyError) Error() string {
 
 // Dispatcher holds immutable external dependencies and later-owned state.
 type Dispatcher struct {
-	beads        Beads
-	workspaces   Workspaces
-	lander       Lander
-	runner       Runner
-	repos        Repos
-	gate         Gate
-	clock        Clock
-	config       config.Config
-	log          Log
-	sessionsMu   sync.RWMutex
-	sessions     map[string]Session
-	stateMu      sync.Mutex
-	tickInFlight bool
-	draining     bool
-	repoWarnedAt map[string]time.Time
+	beads         Beads
+	workspaces    Workspaces
+	lander        Lander
+	runner        Runner
+	repos         Repos
+	gate          Gate
+	clock         Clock
+	config        config.Config
+	log           Log
+	sessionsMu    sync.RWMutex
+	sessions      map[string]Session
+	stateMu       sync.Mutex
+	tickInFlight  bool
+	draining      bool
+	pendingNotify bool
+	repoWarnedAt  map[string]time.Time
+
+	lifecycleMu        sync.Mutex
+	callbacksInstalled bool
+	running            bool
+	ticker             Ticker
+	tickCancel         context.CancelFunc
+	drainDone          chan struct{}
+	drainClosed        bool
 }
 
 // New constructs a Dispatcher after validating every port.
