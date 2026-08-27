@@ -1,0 +1,3 @@
+fleet:
+  poll-interval: 30
+  unknown: rejected
