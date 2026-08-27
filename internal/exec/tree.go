@@ -33,6 +33,10 @@ func configureProcessGroup(cmd *osexec.Cmd) {
 // Terminate stops handle's process group. It first sends SIGTERM, then SIGKILL
 // after a bounded grace period. A missing process group is already terminated.
 func Terminate(ctx context.Context, handle *os.Process) error {
+	return terminateProcessGroup(ctx, handle, terminationGrace)
+}
+
+func terminateProcessGroup(ctx context.Context, handle *os.Process, grace time.Duration) error {
 	if handle == nil || handle.Pid <= 0 {
 		return nil
 	}
@@ -47,7 +51,7 @@ func Terminate(ctx context.Context, handle *os.Process) error {
 	if !alive {
 		return nil
 	}
-	if gone, err := waitForGroup(ctx, handle.Pid, terminationGrace); err != nil {
+	if gone, err := waitForGroup(ctx, handle.Pid, grace); err != nil {
 		return fmt.Errorf("wait for graceful process-group termination: %w", err)
 	} else if gone {
 		return nil
@@ -78,7 +82,7 @@ func signalGroup(pgid int, signal syscall.Signal) (bool, error) {
 	// Darwin can report EPERM while a just-killed group is being reaped. Treat
 	// it as live for polling so termination remains bounded and does not hide a
 	// real survivor behind a transient permission result.
-	if signal == 0 && errors.Is(err, syscall.EPERM) {
+	if (signal == 0 || signal == syscall.SIGKILL) && errors.Is(err, syscall.EPERM) {
 		return true, nil
 	}
 	return err == nil, err
