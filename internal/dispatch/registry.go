@@ -19,12 +19,12 @@ const (
 
 // Session records one live agent session.
 type Session struct {
-	Handle, Task, Seat, Backend, Model, Difficulty, Effort, Phase string
-	Repo                                                          repo.Repo
-	Role                                                          Role
-	FallbackAttempted, Decomposition                              bool
-	Started                                                       time.Time
-	Status                                                        SessionStatus
+	Handle, Task, Seat, Backend, Model, Difficulty, Effort, Agent, Phase string
+	Repo                                                                 repo.Repo
+	Role                                                                 Role
+	FallbackAttempted, Decomposition                                     bool
+	Started                                                              time.Time
+	Status                                                               SessionStatus
 }
 
 // Add registers a live session and stamps its current attempt start time.

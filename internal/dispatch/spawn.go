@@ -154,7 +154,7 @@ func (d *Dispatcher) spawnSession(ctx context.Context, repository repo.Repo, tas
 	d.Add(Session{
 		Handle: handle, Repo: repository, Task: task, Role: role, Seat: seat,
 		Backend: resolution.Backend, Model: resolution.Model, Difficulty: difficulty,
-		Effort: resolution.Effort, Status: Working,
+		Effort: resolution.Effort, Agent: resolution.Agent, Status: Working,
 	})
 	fields := dispatchFields(repository, task, role, seat)
 	fields["backend"] = resolution.Backend
