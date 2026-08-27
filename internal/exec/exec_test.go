@@ -72,14 +72,18 @@ func TestRunCapturesArgvOutputAndExitCode(t *testing.T) {
 
 func TestRunSetsDirectoryAndDoesNotInheritEnvironment(t *testing.T) {
 	t.Setenv("MAGICITE_EXEC_TEST_ENV", "inherited")
-	workDir := t.TempDir()
+	workDir := ".."
 
 	name, args := helperCommand("pwd")
 	stdout, _, exitCode, runErr := Run(context.Background(), workDir, name, args...)
 	if runErr != nil || exitCode != 0 {
 		t.Fatalf("Run() = exit %d, error %v", exitCode, runErr)
 	}
-	want, err := filepath.EvalSymlinks(workDir)
+	absoluteWorkDir, err := filepath.Abs(workDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := filepath.EvalSymlinks(absoluteWorkDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,6 +98,21 @@ func TestRunSetsDirectoryAndDoesNotInheritEnvironment(t *testing.T) {
 	}
 	if got := string(stdout); got != "" {
 		t.Errorf("inherited environment = %q, want empty", got)
+	}
+}
+
+func TestRunReturnsTypedStartError(t *testing.T) {
+	stdout, stderr, exitCode, runErr := Run(context.Background(), ".", "/definitely/not/a/magicite-command")
+
+	if stdout != nil || stderr != nil {
+		t.Errorf("output = (%q, %q), want no output", stdout, stderr)
+	}
+	if exitCode != -1 {
+		t.Errorf("exit code = %d, want -1", exitCode)
+	}
+	var typedErr *Error
+	if !errors.As(runErr, &typedErr) {
+		t.Errorf("error = %T, want *Error", runErr)
 	}
 }
 
