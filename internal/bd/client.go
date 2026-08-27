@@ -60,13 +60,6 @@ func (c *Client) Run(ctx context.Context, args ...string) (Result, error) {
 	if errors.As(runErr, &exitErr) && ctx.Err() == nil {
 		return result, nil
 	}
-
-	c.logEvent(logging.Error, map[string]any{
-		"program": c.Program,
-		"root":    c.Root,
-		"args":    argv,
-		"error":   runErr.Error(),
-	})
 	return result, runErr
 }
 

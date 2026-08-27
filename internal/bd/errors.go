@@ -40,6 +40,7 @@ type Error struct {
 	Kind     Kind
 	ExitCode int
 	Detail   string
+	Cause    error
 }
 
 func (e *Error) Error() string {
@@ -48,6 +49,14 @@ func (e *Error) Error() string {
 	}
 	command := strings.Join(append([]string{e.Op}, e.Args...), " ")
 	return fmt.Sprintf("%s: %s (exit %d): %s", command, e.Kind, e.ExitCode, cleanDetail(e.Detail))
+}
+
+// Unwrap returns the underlying transport or decode error.
+func (e *Error) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Cause
 }
 
 // Classify maps one bd result to the shared error taxonomy.

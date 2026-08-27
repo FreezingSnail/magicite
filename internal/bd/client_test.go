@@ -3,7 +3,6 @@ package bd
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -88,7 +87,7 @@ func TestRunReturnsErrorsForCancellationAndSpawnFailure(t *testing.T) {
 	}
 }
 
-func TestRunLogsOnlyReturnedFailureToClientLogger(t *testing.T) {
+func TestRunLeavesReturnedFailureLoggingToCallers(t *testing.T) {
 	var output bytes.Buffer
 	client := newFake(t, fakeEntry{Match: []string{"exit"}, Exit: 2})
 	client.Log = logging.New(logging.Config{Level: logging.Debug, Format: logging.JSON, Writer: &output})
@@ -103,15 +102,7 @@ func TestRunLogsOnlyReturnedFailureToClientLogger(t *testing.T) {
 	if _, err := client.Run(context.Background(), "exit"); err == nil {
 		t.Fatal("Run accepted missing executable")
 	}
-	var events []map[string]any
-	for _, line := range bytes.Split(bytes.TrimSpace(output.Bytes()), []byte{'\n'}) {
-		var event map[string]any
-		if err := json.Unmarshal(line, &event); err != nil {
-			t.Fatal(err)
-		}
-		events = append(events, event)
-	}
-	if len(events) != 1 {
-		t.Fatalf("events = %d, want 1: %s", len(events), output.String())
+	if output.Len() != 0 {
+		t.Errorf("returned failure logged: %s", output.String())
 	}
 }
