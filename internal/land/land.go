@@ -49,7 +49,7 @@ type Options struct {
 type Pipeline struct {
 	workspace Workspace
 	runner    Runner
-	gate      []string
+	gateArgv  []string
 	gateFunc  func(ctx context.Context, c *Context) (int, error)
 	log       func(level, msg string)
 }
@@ -72,7 +72,7 @@ func New(opts Options) (*Pipeline, error) {
 	return &Pipeline{
 		workspace: opts.Workspace,
 		runner:    opts.Runner,
-		gate:      append([]string(nil), gate...),
+		gateArgv:  append([]string(nil), gate...),
 		gateFunc:  opts.GateFunc,
 		log:       log,
 	}, nil
