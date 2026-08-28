@@ -3,48 +3,52 @@ package decomp
 import (
 	"encoding/json"
 	"os"
-	"sort"
-	"strings"
 	"testing"
 
 	"github.com/connorfranc/magicite/internal/parity"
 )
 
 func TestMaduinDecompParity(t *testing.T) {
-	for _, name := range decompParityNames() {
-		t.Run(name, func(t *testing.T) {
-			data, err := os.ReadFile("testdata/clean-ten.json")
-			if err != nil {
-				t.Fatal(err)
-			}
-			var fixture checkFixture
-			if err := json.Unmarshal(data, &fixture); err != nil {
-				t.Fatal(err)
-			}
-			if got := Check(fixture.Children); len(got) != 0 {
-				t.Fatalf("Check(clean-ten) = %#v", got)
-			}
-			fixture.Children[0].Acceptance = "not\nplain"
-			violations := Check(fixture.Children)
-			found := false
-			for _, violation := range violations {
-				found = found || violation.ID == "a" && violation.Rule == RuleCapAcceptance
-			}
-			if !found {
-				t.Fatalf("Check(invalid acceptance) = %#v", violations)
-			}
-		})
-	}
+	bindings := parity.NewBindings(t, "TestMaduinDecompParity")
+	bindings.Bind("maduin-test-decomp-gate-approved-labels-and-clears-rejection", func(t *testing.T) {
+		children := parityFixture(t, "clean-ten.json")
+		if got := Check(children); got != nil {
+			t.Fatalf("Check(clean-ten) = %#v", got)
+		}
+	})
+	bindings.Bind("maduin-test-decomp-gate-rejected-files-once-then-comments", func(t *testing.T) {
+		children := parityFixture(t, "two-child-cycle.json")
+		if got := Check(children); !hasRule(got, RuleGraphCycle) {
+			t.Fatalf("Check(graph-cycle) = %#v", got)
+		}
+	})
+	bindings.Bind("maduin-test-decomp-gate-partial-retries-and-read-errors-contain", func(t *testing.T) {
+		children := parityFixture(t, "unprovided-symbol.json")
+		if got := Check(children); !hasRule(got, RuleUnprovidedSymbol) {
+			t.Fatalf("Check(unprovided-symbol) = %#v", got)
+		}
+	})
+	bindings.Run()
 }
 
-func decompParityNames() []string {
-	counterparts := parity.OrchestrationCounterparts()
-	names := make([]string, 0)
-	for name, testName := range counterparts {
-		if strings.HasPrefix(testName, "TestMaduinDecompParity/") {
-			names = append(names, name)
+func parityFixture(t *testing.T, name string) []Child {
+	t.Helper()
+	data, err := os.ReadFile("testdata/" + name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixture checkFixture
+	if err := json.Unmarshal(data, &fixture); err != nil {
+		t.Fatal(err)
+	}
+	return fixture.Children
+}
+
+func hasRule(violations []Violation, want Rule) bool {
+	for _, violation := range violations {
+		if violation.Rule == want {
+			return true
 		}
 	}
-	sort.Strings(names)
-	return names
+	return false
 }
