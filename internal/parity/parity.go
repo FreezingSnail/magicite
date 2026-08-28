@@ -48,21 +48,25 @@ type Report struct {
 	Covered  []string
 	Diverged []string
 	Missing  []string
+	Domains  map[string]DomainCounts
 }
 
 // Coverage reports each invariant as replayed, deliberately diverged, or missing.
 func Coverage(catalog Catalog, ledger Ledger, counterparts map[string]string) Report {
-	var report Report
+	report := Report{Domains: make(map[string]DomainCounts, len(catalog.ByDomain))}
 	for _, invariant := range catalog.Entries {
+		counts := report.Domains[invariant.Domain]
 		if _, ok := counterparts[invariant.Name]; ok {
 			report.Covered = append(report.Covered, invariant.Name)
-			continue
-		}
-		if ok, _ := ledger.Justified(invariant.Name); ok {
+			counts.Covered++
+		} else if ok, _ := ledger.Justified(invariant.Name); ok {
 			report.Diverged = append(report.Diverged, invariant.Name)
-			continue
+			counts.Diverged++
+		} else {
+			report.Missing = append(report.Missing, invariant.Name)
+			counts.Missing++
 		}
-		report.Missing = append(report.Missing, invariant.Name)
+		report.Domains[invariant.Domain] = counts
 	}
 	return report
 }
