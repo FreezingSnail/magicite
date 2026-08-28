@@ -116,7 +116,7 @@ func (t Tail) Run(ctx context.Context, e *Env) int {
 		if !t.Follow {
 			return Fail(e, err)
 		}
-		if hadEvent {
+		if err == nil || hadEvent {
 			backoff = initialTailBackoff
 			attempts = 0
 		}

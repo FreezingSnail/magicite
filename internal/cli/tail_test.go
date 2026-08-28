@@ -80,6 +80,17 @@ func TestTailReplaysFiniteWindowAndStartsLive(t *testing.T) {
 	}
 }
 
+func TestTailReconnectBudget(t *testing.T) {
+	var output, stderr bytes.Buffer
+	env := &Env{Client: client.New(client.Options{Socket: ".missing-tail.sock"}), Out: &output, Err: &stderr}
+	if code := (Tail{Follow: true, Reconnect: 0}).Run(context.Background(), env); code != 3 {
+		t.Fatalf("Run() = %d, want 3; stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "reconnect attempts exhausted") {
+		t.Fatalf("stderr = %q", stderr.String())
+	}
+}
+
 func TestTailReportsMissedRange(t *testing.T) {
 	bus := server.NewBus(2)
 	for range 4 {

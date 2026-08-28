@@ -20,7 +20,7 @@ var testSocketSequence atomic.Uint64
 
 func testSocket(t *testing.T) string {
 	t.Helper()
-	path, err := filepath.Abs(fmt.Sprintf(".magicite-client-%d-%d.sock", os.Getpid(), testSocketSequence.Add(1)))
+	path, err := filepath.Abs(fmt.Sprintf(".m-%d-%d.sock", os.Getpid(), testSocketSequence.Add(1)))
 	if err != nil {
 		t.Fatal(err)
 	}
