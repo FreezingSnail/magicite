@@ -215,3 +215,55 @@ func TestParityBudget(t *testing.T) {
 		t.Fatalf("parity suite exceeded %s: %s", parityBudget, elapsed)
 	}
 }
+
+type parityMutationSample struct {
+	name        string
+	invariant   string
+	counterpart string
+}
+
+var parityMutationSamples = []parityMutationSample{
+	{"config Kiro tier", "maduin-test-config-difficulty-model-kiro-tiers", "TestMaduinConfigParity/maduin-test-config-difficulty-model-kiro-tiers"},
+	{"logging level filter", "maduin-test-log-respects-level", "TestMaduinLoggingParity/maduin-test-log-respects-level"},
+}
+
+func TestParityMutationSamplesRemainBound(t *testing.T) {
+	counterparts := SubstrateCounterparts()
+	for _, sample := range parityMutationSamples {
+		if got := counterparts[sample.invariant]; got != sample.counterpart {
+			t.Errorf("%s counterpart = %q, want %q", sample.name, got, sample.counterpart)
+		}
+	}
+}
+
+func TestBlanketDivergencesArePending(t *testing.T) {
+	catalog, err := LoadCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ledger, err := LoadLedger()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pending, err := PendingDomains()
+	if err != nil {
+		t.Fatal(err)
+	}
+	permanent := map[string]struct{}{"cockpit": {}, "terminal": {}}
+	for _, divergence := range ledger.Reasons() {
+		if _, domain := catalog.ByDomain[divergence.Target]; !domain {
+			continue
+		}
+		if _, exempt := permanent[divergence.Target]; exempt {
+			continue
+		}
+		if _, listed := pending[divergence.Target]; !listed {
+			t.Errorf("blanket divergence %q is not pending conversion", divergence.Target)
+		}
+	}
+	for domain := range pending {
+		if _, blanket := ledger.byTarget[domain]; !blanket {
+			t.Errorf("pending domain %q has no blanket divergence", domain)
+		}
+	}
+}
