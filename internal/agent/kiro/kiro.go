@@ -27,12 +27,14 @@ var ansiEscape = regexp.MustCompile(`\x1b\[[0-?]*[ -/]*[@-~]`)
 type Options struct {
 	Executable string
 	AgentsDir  string
+	Env        []string
 }
 
 // Adapter runs Kiro chat sessions and retains their local state.
 type Adapter struct {
 	executable string
 	agentsDir  string
+	env        []string
 	store      *agent.Store[*run]
 }
 
@@ -54,6 +56,7 @@ func New(opts Options) *Adapter {
 	return &Adapter{
 		executable: opts.Executable,
 		agentsDir:  opts.AgentsDir,
+		env:        append([]string(nil), opts.Env...),
 		store:      agent.NewStore[*run]("kiro"),
 	}
 }
@@ -90,7 +93,7 @@ func (a *Adapter) Run(ctx context.Context, spec agent.RunSpec) (agent.Handle, er
 
 	args := RunArgs(a.executable, spec.Model, spec.Agent, spec.Effort, spec.Plan)
 	session, err := executil.Start(ctx, executil.Spec{
-		Dir: workdir, Name: args[0], Args: args[1:], Env: nil,
+		Dir: workdir, Name: args[0], Args: args[1:], Env: a.env,
 	})
 	if err != nil {
 		return "", err

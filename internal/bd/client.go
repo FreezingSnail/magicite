@@ -22,6 +22,7 @@ type Result struct {
 type Client struct {
 	Program string
 	Root    string
+	Env     []string
 	Log     *logging.Logger
 }
 
@@ -50,7 +51,7 @@ func (c *Client) Run(ctx context.Context, args ...string) (Result, error) {
 	argv = append(argv, "-C", c.Root)
 	argv = append(argv, args...)
 
-	stdout, stderr, exitCode, runErr := magicexec.Run(ctx, c.Root, c.Program, argv...)
+	stdout, stderr, exitCode, runErr := magicexec.RunEnv(ctx, c.Root, c.Env, c.Program, argv...)
 	result := Result{ExitCode: exitCode, Stdout: stdout, Stderr: stderr}
 	if runErr == nil {
 		return result, nil

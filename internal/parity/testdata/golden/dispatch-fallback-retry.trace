@@ -1,0 +1,8 @@
+{root}/repo bd -C {root}/repo/ label list task-1 --json
+{root}/repo bd -C {root}/repo/ update task-1 --claim
+{root}/repo bd -C {root}/repo/ label list task-1 --json
+{root}/repo bd -C {root}/repo/ show task-1 --json
+{root}/ifrit kiro chat --no-interactive --agent a --model m --effort high --trust-all-tools {plan}
+{root}/repo bd -C {root}/repo/ comment task-1 --file {temp}
+{root}/repo bd -C {root}/repo/ show task-1 --json
+{root}/ifrit kiro chat --no-interactive --agent a --model fallback --effort high --trust-all-tools {plan}

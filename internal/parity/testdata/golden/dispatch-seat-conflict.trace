@@ -1,0 +1,2 @@
+{root}/repo bd -C {root}/repo/ label list task-1 --json
+{root}/repo bd -C {root}/repo/ comment task-1 --file {temp}

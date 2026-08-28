@@ -18,6 +18,7 @@ var (
 	shaPattern       = regexp.MustCompile(`[0-9a-fA-F]{40}`)
 	timestampPattern = regexp.MustCompile(`\b[0-9]{4}-[0-9]{2}-[0-9]{2}(?:[T ][0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:?[0-9]{2})?)?\b`)
 	durationPattern  = regexp.MustCompile(`\b(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:ns|us|µs|ms|s|m|h)(?:(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:ns|us|µs|ms|s|m|h))*\b`)
+	tempRootPattern  = regexp.MustCompile(`(?:/private)?/var/folders/[^/]+/[^/]+/T/[^/]+/[0-9]+`)
 )
 
 func init() {
@@ -62,8 +63,20 @@ func Render(entries []testenv.Entry) string {
 	var rendered strings.Builder
 	for _, entry := range entries {
 		fields := make([]string, 0, len(entry.Argv)+1)
-		fields = append(fields, filepath.ToSlash(entry.Dir))
-		fields = append(fields, entry.Argv...)
+		fields = append(fields, traceField(entry.Dir))
+		for index, argument := range entry.Argv {
+			argument = traceField(argument)
+			if index == 0 && filepath.Base(argument) == "kiro" {
+				argument = "kiro"
+			}
+			if index > 0 && entry.Argv[index-1] == "--trust-all-tools" {
+				argument = "{plan}"
+			}
+			if index > 0 && entry.Argv[index-1] == "--file" && strings.HasPrefix(filepath.Base(argument), "magicite-bd-") {
+				argument = "{temp}"
+			}
+			fields = append(fields, argument)
+		}
 		for i, field := range fields {
 			if i != 0 {
 				rendered.WriteByte(' ')
@@ -75,8 +88,22 @@ func Render(entries []testenv.Entry) string {
 	return rendered.String()
 }
 
+func traceField(field string) string {
+	trailing := strings.HasSuffix(field, string(filepath.Separator))
+	if filepath.IsAbs(field) {
+		if resolved, err := filepath.EvalSymlinks(field); err == nil {
+			field = resolved
+		}
+	}
+	if trailing && !strings.HasSuffix(field, string(filepath.Separator)) {
+		field += string(filepath.Separator)
+	}
+	return filepath.ToSlash(field)
+}
+
 // Normalize removes paths and execution-time values that vary between runs.
 func Normalize(root string, s string) string {
+	s = tempRootPattern.ReplaceAllString(s, "{root}")
 	s = normalizeRoot(root, s)
 	shaNames := make(map[string]string)
 	shaNumber := 0
@@ -154,6 +181,9 @@ func traceRoot(entries []testenv.Entry) string {
 				continue
 			}
 			dir := filepath.Clean(path)
+			if resolved, err := filepath.EvalSymlinks(dir); err == nil {
+				dir = resolved
+			}
 			if root == "" {
 				root = dir
 				continue
