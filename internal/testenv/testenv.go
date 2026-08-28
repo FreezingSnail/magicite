@@ -17,8 +17,9 @@ type Env struct {
 	BinDir    string
 	TracePath string
 
-	t         *testing.T
-	installed map[string]string
+	t           *testing.T
+	installed   map[string]string
+	fakeBDStore string
 }
 
 // New creates an isolated environment rooted in the test's temporary directory.
@@ -51,7 +52,7 @@ func New(t *testing.T) *Env {
 
 // Env returns the complete, non-inherited environment for a child process.
 func (e *Env) Env() []string {
-	return []string{
+	env := []string{
 		"PATH=" + e.BinDir,
 		"HOME=" + e.HomeDir,
 		"XDG_CONFIG_HOME=" + filepath.Join(e.Root, "xdg", "config"),
@@ -61,6 +62,10 @@ func (e *Env) Env() []string {
 		"GIT_CONFIG_GLOBAL=" + filepath.Join(e.Root, "gitconfig"),
 		"GIT_CONFIG_NOSYSTEM=1",
 	}
+	if e.fakeBDStore != "" {
+		env = append(env, "MAGICITE_FAKE_BD_STORE="+e.fakeBDStore)
+	}
+	return env
 }
 
 // Install builds srcPkg from the repository and installs it in BinDir as name.
