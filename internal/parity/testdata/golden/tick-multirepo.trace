@@ -1,9 +1,9 @@
 {root}/repo bd -C {root}/repo/ query 'label=drift-fix AND NOT label=human' --json
 {root}/alpha bd -C {root}/alpha/ query 'label=drift-fix AND NOT label=human' --json
 {root}/beta bd -C {root}/beta/ query 'label=drift-fix AND NOT label=human' --json
-{root}/repo bd -C {root}/repo/ query 'status=in_progress AND type=task AND NOT label=human' --json
-{root}/alpha bd -C {root}/alpha/ query 'status=in_progress AND type=task AND NOT label=human' --json
-{root}/beta bd -C {root}/beta/ query 'status=in_progress AND type=task AND NOT label=human' --json
+{root}/repo bd -C {root}/repo/ query 'status=in_progress AND NOT label=human' --json
+{root}/alpha bd -C {root}/alpha/ query 'status=in_progress AND NOT label=human' --json
+{root}/beta bd -C {root}/beta/ query 'status=in_progress AND NOT label=human' --json
 {root}/repo bd -C {root}/repo/ ready --exclude-type epic --exclude-label human --json
 {root}/alpha bd -C {root}/alpha/ ready --exclude-type epic --exclude-label human --json
 {root}/beta bd -C {root}/beta/ ready --exclude-type epic --exclude-label human --json

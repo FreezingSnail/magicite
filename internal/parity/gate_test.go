@@ -224,7 +224,9 @@ type parityMutationSample struct {
 
 var parityMutationSamples = []parityMutationSample{
 	{"config Kiro tier", "maduin-test-config-difficulty-model-kiro-tiers", "TestMaduinConfigParity/maduin-test-config-difficulty-model-kiro-tiers"},
-	{"logging level filter", "maduin-test-log-respects-level", "TestMaduinLoggingParity/maduin-test-log-respects-level"},
+	{"bd semantic negative", "maduin-test-backcompat-single-repo-claim-show-close-propagate", "TestMaduinBDParity/maduin-test-backcompat-single-repo-claim-show-close-propagate"},
+	{"repo bead routing", "maduin-test-repo-lookups-get-and-bead-routing", "TestMaduinRepoParity/maduin-test-repo-lookups-get-and-bead-routing"},
+	{"workspace sync seam", "maduin-test-workspace-repo-life-sync-uses-repo-branch-and-seam", "TestMaduinWorktreeParity/maduin-test-workspace-repo-life-sync-uses-repo-branch-and-seam"}, {"logging level filter", "maduin-test-log-respects-level", "TestMaduinLoggingParity/maduin-test-log-respects-level"},
 	{"main daemon lifecycle", "maduin-test-main-stop-tears-down", "TestMaduinOrchestrationParity/maduin-test-main-stop-tears-down"},
 	{"designer repo dispatch", "maduin-test-designer-design-and-epic-dispatch-repo", "TestMaduinOrchestrationParity/maduin-test-designer-design-and-epic-dispatch-repo"},
 	{"dispatch queue", "maduin-test-dispatch-queue-round-robin", "TestMaduinDispatchParity/maduin-test-dispatch-queue-round-robin"},

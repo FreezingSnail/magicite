@@ -67,7 +67,7 @@ func TestQueryVocabulary(t *testing.T) {
 	}
 	checks := map[string]string{
 		NotHumanQuery("status=open"):    "status=open AND NOT label=human",
-		InProgressQuery():               "status=in_progress AND type=task AND NOT label=human",
+		InProgressQuery():               "status=in_progress AND NOT label=human",
 		DriftFixQuery():                 "label=drift-fix AND NOT label=human",
 		OpenEpicsQuery():                "status=open AND type=epic",
 		EpicChildrenQuery("epic-1"):     "parent=epic-1",

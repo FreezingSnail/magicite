@@ -1,4 +1,4 @@
 {root}/repo bd -C {root}/repo/ query 'label=drift-fix AND NOT label=human' --json
-{root}/repo bd -C {root}/repo/ query 'status=in_progress AND type=task AND NOT label=human' --json
+{root}/repo bd -C {root}/repo/ query 'status=in_progress AND NOT label=human' --json
 {root}/repo bd -C {root}/repo/ ready --exclude-type epic --exclude-label human --json
 {root}/repo bd -C {root}/repo/ query 'status=open AND type=epic' --json

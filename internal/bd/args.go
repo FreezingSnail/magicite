@@ -146,7 +146,7 @@ func NotHumanQuery(q string) string {
 
 // InProgressQuery selects non-human in-progress tasks.
 func InProgressQuery() string {
-	return NotHumanQuery("status=in_progress AND type=task")
+	return NotHumanQuery("status=in_progress")
 }
 
 // DriftFixQuery selects non-human drift-fix beads.
