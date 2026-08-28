@@ -36,7 +36,17 @@ func parseCatalog(reader io.Reader) (Catalog, error) {
 		lineNumber++
 		line := strings.TrimSuffix(scanner.Text(), "\r")
 		if strings.HasPrefix(line, "#") {
-			if strings.HasPrefix(line, "# total:") {
+			switch {
+			case strings.HasPrefix(line, "# revision:"):
+				if catalog.Revision != "" {
+					return Catalog{}, fmt.Errorf("catalog line %d: duplicate revision header", lineNumber)
+				}
+				revision := strings.TrimSpace(strings.TrimPrefix(line, "# revision:"))
+				if !validRevision(revision) {
+					return Catalog{}, fmt.Errorf("catalog line %d: invalid revision header", lineNumber)
+				}
+				catalog.Revision = revision
+			case strings.HasPrefix(line, "# total:"):
 				if declaredTotal != nil {
 					return Catalog{}, fmt.Errorf("catalog line %d: duplicate total header", lineNumber)
 				}
@@ -78,8 +88,25 @@ func parseCatalog(reader io.Reader) (Catalog, error) {
 	if declaredTotal == nil {
 		return Catalog{}, fmt.Errorf("catalog: missing total header")
 	}
+	if catalog.Revision == "" {
+		return Catalog{}, fmt.Errorf("catalog: missing revision header")
+	}
 	if len(catalog.Entries) != *declaredTotal {
 		return Catalog{}, fmt.Errorf("catalog: total mismatch: header declares %d rows, found %d", *declaredTotal, len(catalog.Entries))
 	}
 	return catalog, nil
+}
+
+func validRevision(revision string) bool {
+	if len(revision) != 40 {
+		return false
+	}
+	for _, char := range revision {
+		if char < '0' || char > '9' {
+			if char < 'a' || char > 'f' {
+				return false
+			}
+		}
+	}
+	return true
 }

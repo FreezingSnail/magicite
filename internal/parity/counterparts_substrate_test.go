@@ -27,7 +27,7 @@ func TestSubstrateCounterpartsExhaustive(t *testing.T) {
 			t.Errorf("unexpected counterpart[%q] = %q", invariant.Name, got)
 		}
 	}
-	if len(counterparts) != want || want != 107 {
+	if len(counterparts) != want || want != 108 {
 		t.Fatalf("counterpart count = %d, want %d", len(counterparts), want)
 	}
 }

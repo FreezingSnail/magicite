@@ -61,7 +61,7 @@ func TestLedgerJustifiedPrefersExactTarget(t *testing.T) {
 }
 
 func TestCoverage(t *testing.T) {
-	catalog, err := parseCatalog(strings.NewReader("# total: 3\none\talpha\t1\ntwo\talpha\t2\nthree\tbeta\t3\n"))
+	catalog, err := parseCatalog(strings.NewReader("# revision: 0123456789012345678901234567890123456789\n# total: 3\none\talpha\t1\ntwo\talpha\t2\nthree\tbeta\t3\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestCoverage(t *testing.T) {
 
 func testCatalog(t *testing.T) Catalog {
 	t.Helper()
-	catalog, err := parseCatalog(strings.NewReader("# total: 2\none\talpha\t1\ntwo\talpha\t2\n"))
+	catalog, err := parseCatalog(strings.NewReader("# revision: 0123456789012345678901234567890123456789\n# total: 2\none\talpha\t1\ntwo\talpha\t2\n"))
 	if err != nil {
 		t.Fatal(err)
 	}

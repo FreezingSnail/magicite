@@ -26,7 +26,7 @@ func TestOrchestrationCounterpartsExhaustive(t *testing.T) {
 			t.Errorf("unexpected counterpart[%q] = %q", invariant.Name, got)
 		}
 	}
-	if len(counterparts) != want || want != 209 {
+	if len(counterparts) != want || want != 215 {
 		t.Fatalf("counterpart count = %d, want %d", len(counterparts), want)
 	}
 }

@@ -24,6 +24,7 @@ type Invariant struct {
 
 // Catalog is the immutable-in-practice snapshot plus indexes for parity checks.
 type Catalog struct {
+	Revision string
 	Entries  []Invariant
 	ByName   map[string]Invariant
 	ByDomain map[string][]Invariant

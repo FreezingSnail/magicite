@@ -1,7 +1,9 @@
 package parity
 
 import (
+	"bufio"
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -52,6 +54,116 @@ func TestParityCoverage(t *testing.T) {
 		}
 		t.Fatalf("parity coverage incomplete:\n%s", output.String())
 	}
+}
+
+const maduinPathEnv = "MADUIN_PATH"
+
+func TestCatalogDrift(t *testing.T) {
+	catalog, err := LoadCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := configuredMaduinPath()
+	if !maduinCheckoutAvailable(path) {
+		t.Skip(catalogDriftSkipReason(path))
+	}
+	run := func(args ...string) ([]byte, error) {
+		return runMaduinGit(path, args...)
+	}
+	if err := checkCatalogDrift(catalog, path, run); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCatalogDriftDetectsMismatches(t *testing.T) {
+	revision := "0123456789012345678901234567890123456789"
+	catalog := Catalog{Revision: revision, Entries: []Invariant{{Name: "one"}}}
+
+	t.Run("revision", func(t *testing.T) {
+		run := func(args ...string) ([]byte, error) {
+			return []byte("abcdefabcdefabcdefabcdefabcdefabcdefabcd\n"), nil
+		}
+		err := checkCatalogDrift(catalog, "maduin", run)
+		if err == nil || !strings.Contains(err.Error(), "catalog revision") {
+			t.Fatalf("checkCatalogDrift() error = %v, want revision mismatch", err)
+		}
+	})
+	t.Run("count", func(t *testing.T) {
+		run := func(args ...string) ([]byte, error) {
+			if args[0] == "rev-parse" {
+				return []byte(revision + "\n"), nil
+			}
+			return []byte("(ert-deftest maduin-test-one () nil)\n(ert-deftest maduin-test-two () nil)\n"), nil
+		}
+		err := checkCatalogDrift(catalog, "maduin", run)
+		if err == nil || !strings.Contains(err.Error(), "catalog count") {
+			t.Fatalf("checkCatalogDrift() error = %v, want count mismatch", err)
+		}
+	})
+}
+
+func TestCatalogDriftSkipsWithoutCheckout(t *testing.T) {
+	path := filepath.Join(dataPath(catalogFile), "maduin-unavailable")
+	if maduinCheckoutAvailable(path) {
+		t.Fatalf("maduinCheckoutAvailable(%q) = true, want false", path)
+	}
+	if got := catalogDriftSkipReason(path); !strings.Contains(got, path) {
+		t.Fatalf("catalogDriftSkipReason() = %q, want path %q", got, path)
+	}
+}
+
+func configuredMaduinPath() string {
+	if path := os.Getenv(maduinPathEnv); path != "" {
+		return path
+	}
+	return filepath.Clean(filepath.Join(filepath.Dir(dataPath(catalogFile)), "..", "..", "..", "..", "maduin"))
+}
+
+func maduinCheckoutAvailable(path string) bool {
+	_, err := os.Stat(filepath.Join(path, ".git"))
+	return err == nil
+}
+
+func catalogDriftSkipReason(path string) string {
+	return fmt.Sprintf("catalog drift check skipped: wanted Maduin checkout at %q", path)
+}
+
+func checkCatalogDrift(catalog Catalog, path string, run func(...string) ([]byte, error)) error {
+	head, err := run("rev-parse", "HEAD")
+	if err != nil {
+		return fmt.Errorf("read Maduin HEAD at %q: %w", path, err)
+	}
+	if got := strings.TrimSpace(string(head)); got != catalog.Revision {
+		return fmt.Errorf("catalog revision %q does not match Maduin HEAD %q", catalog.Revision, got)
+	}
+	source, err := run("show", catalog.Revision+":harness/maduin-test.el")
+	if err != nil {
+		return fmt.Errorf("read Maduin tests at %q: %w", path, err)
+	}
+	if got, want := countMaduinInvariants(source), len(catalog.Entries); got != want {
+		return fmt.Errorf("catalog count %d does not match Maduin invariant count %d", want, got)
+	}
+	return nil
+}
+
+func runMaduinGit(path string, args ...string) ([]byte, error) {
+	command := exec.Command("git", append([]string{"-C", path}, args...)...)
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("git %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(string(output)))
+	}
+	return output, nil
+}
+
+func countMaduinInvariants(source []byte) int {
+	scanner := bufio.NewScanner(bytes.NewReader(source))
+	count := 0
+	for scanner.Scan() {
+		if strings.HasPrefix(scanner.Text(), "(ert-deftest maduin-test-") {
+			count++
+		}
+	}
+	return count
 }
 
 func TestParityOffline(t *testing.T) {
