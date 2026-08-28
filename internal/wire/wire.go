@@ -92,5 +92,6 @@ type Event struct {
 }
 
 type SubscribeParams struct {
-	Since uint64 `json:"since,omitempty"`
+	Since  uint64 `json:"since"`
+	Follow *bool  `json:"follow,omitempty"`
 }

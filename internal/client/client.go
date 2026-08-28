@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"sync/atomic"
 	"time"
@@ -132,7 +133,7 @@ func (c *Client) Call(ctx context.Context, command string, params, out any) erro
 }
 
 // Stream subscribes to events after since and delivers each event to fn.
-func (c *Client) Stream(ctx context.Context, since uint64, fn func(wire.Event) error) (uint64, error) {
+func (c *Client) Stream(ctx context.Context, since uint64, fn func(wire.Event) error, follow ...bool) (uint64, error) {
 	ctx = nonNilContext(ctx)
 	dialCtx, cancel := context.WithTimeout(ctx, c.timeout)
 	conn, err := dial(dialCtx, c.socket)
@@ -158,7 +159,26 @@ func (c *Client) Stream(ctx context.Context, since uint64, fn func(wire.Event) e
 		}
 	}()
 
-	params, err := json.Marshal(wire.SubscribeParams{Since: since})
+	following := true
+	if len(follow) > 0 {
+		following = follow[0]
+	}
+	var requestParams any
+	switch {
+	case since == math.MaxUint64 && following:
+		// No params selects the daemon's current live position.
+	case since == math.MaxUint64:
+		requestParams = struct {
+			Follow *bool `json:"follow"`
+		}{Follow: &following}
+	default:
+		var finite *bool
+		if !following {
+			finite = &following
+		}
+		requestParams = wire.SubscribeParams{Since: since, Follow: finite}
+	}
+	params, err := marshalParams(requestParams)
 	if err != nil {
 		return 0, internal(err)
 	}

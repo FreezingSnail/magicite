@@ -137,16 +137,31 @@ func (d *daemon) handle(conn net.Conn) {
 // stream owns all writes while a connection has entered subscribe mode. It
 // keeps reading requests so conflicts do not interrupt event delivery.
 func (d *daemon) stream(conn net.Conn, decoder *wire.Decoder, encoder *wire.Encoder, request wire.Request) bool {
-	var params wire.SubscribeParams
+	var supplied struct {
+		Since  *uint64 `json:"since"`
+		Follow *bool   `json:"follow"`
+	}
 	if len(request.Params) != 0 {
-		if err := json.Unmarshal(request.Params, &params); err != nil {
+		if err := json.Unmarshal(request.Params, &supplied); err != nil {
 			return encoder.Encode(errorResponse(request.ID, wire.CodeBadRequest, err.Error())) != nil
 		}
 	}
-	subscription := d.deps.Bus.Subscribe(params.Since, 64)
+	since := d.deps.Bus.Last()
+	if supplied.Since != nil {
+		since = *supplied.Since
+	}
+	follow := true
+	if supplied.Follow != nil {
+		follow = *supplied.Follow
+	}
+	subscription := d.deps.Bus.Subscribe(since, 64)
+	last := d.deps.Bus.Last()
 	d.track(subscription)
 	defer d.untrack(subscription)
 	defer subscription.Close()
+	if !follow && last <= since {
+		return true
+	}
 
 	requests := make(chan decodedRequest, 1)
 	stopped := make(chan struct{})
@@ -159,6 +174,9 @@ func (d *daemon) stream(conn net.Conn, decoder *wire.Decoder, encoder *wire.Enco
 				return true
 			}
 			if encoder.Encode(event) != nil {
+				return true
+			}
+			if !follow && event.Seq >= last {
 				return true
 			}
 		case next, ok := <-requests:

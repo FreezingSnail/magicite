@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"path/filepath"
 	"sort"
@@ -19,7 +18,6 @@ import (
 	"github.com/FreezingSnail/magicite/internal/logging"
 	"github.com/FreezingSnail/magicite/internal/server"
 	"github.com/FreezingSnail/magicite/internal/version"
-	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 // Env contains the dependencies shared by every command.
@@ -112,7 +110,6 @@ func defaultSocket() string {
 
 func init() {
 	Register(Command{Name: "serve", Usage: "serve [--socket path] [--config path]", Summary: "run the daemon", Run: serve})
-	Register(Command{Name: "tail", Usage: "tail [--socket path] [--json]", Summary: "stream daemon events", Run: tail})
 }
 
 func serve(ctx context.Context, e *Env, args []string) int {
@@ -138,57 +135,6 @@ func serve(ctx context.Context, e *Env, args []string) int {
 		return 1
 	}
 	return 0
-}
-
-func tail(ctx context.Context, e *Env, args []string) int {
-	flags := flag.NewFlagSet("tail", flag.ContinueOnError)
-	flags.SetOutput(io.Discard)
-	socket := flags.String("socket", defaultSocket(), "Unix socket path")
-	asJSON := flags.Bool("json", false, "write JSON")
-	if flags.Parse(args) != nil || flags.NArg() != 0 {
-		return commandUsage(e, "tail")
-	}
-	conn, err := net.DialTimeout("unix", *socket, time.Second)
-	if err != nil {
-		return Fail(e, clientError(*socket, err))
-	}
-	defer conn.Close()
-	if err := wire.NewEncoder(conn).Encode(wire.Request{Schema: wire.Schema, ID: "tail", Command: "subscribe"}); err != nil {
-		return Fail(e, clientError(*socket, err))
-	}
-	done := make(chan struct{})
-	defer close(done)
-	go func() {
-		select {
-		case <-ctx.Done():
-			_ = conn.Close()
-		case <-done:
-		}
-	}()
-	decoder := wire.NewDecoder(conn)
-	for {
-		frame, err := decoder.Frame()
-		if err != nil {
-			if ctx.Err() != nil {
-				return 0
-			}
-			return Fail(e, clientError(*socket, err))
-		}
-		if frame.Event == nil {
-			continue
-		}
-		if *asJSON {
-			if err := json.NewEncoder(e.Out).Encode(frame.Event); err != nil {
-				return Fail(e, err)
-			}
-		} else if err := EmitLine(e.Out, "%s", frame.Event.Kind); err != nil {
-			return Fail(e, err)
-		}
-	}
-}
-
-func clientError(socket string, err error) error {
-	return &client.Error{Code: wire.CodeUnavailable, Message: fmt.Sprintf("daemon socket %q: %v", socket, err)}
 }
 
 func defaultConfig() string {
