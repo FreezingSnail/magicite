@@ -8,7 +8,14 @@ func TestOrchestrationCounterpartsExhaustive(t *testing.T) {
 		t.Fatal(err)
 	}
 	owners := map[string]string{
-		"dispatch": "TestMaduinDispatchParity", "designer": "TestMaduinDispatchParity", "concierge": "TestMaduinDispatchParity", "handoff": "TestMaduinDispatchParity", "main": "TestMaduinDispatchParity", "fixture": "TestMaduinDispatchParity", "prompts": "TestMaduinDispatchParity", "planner": "TestMaduinDispatchParity", "plan": "TestMaduinDispatchParity", "no": "TestMaduinDispatchParity", "lifecycle": "TestMaduinDispatchParity", "install": "TestMaduinDispatchParity", "final": "TestMaduinDispatchParity", "check": "TestMaduinDispatchParity", "bootstrap": "TestMaduinDispatchParity",
+		"dispatch": "TestMaduinDispatchParity",
+		"designer": "TestMaduinOrchestrationParity", "concierge": "TestMaduinOrchestrationParity",
+		"handoff": "TestMaduinOrchestrationParity", "main": "TestMaduinOrchestrationParity",
+		"fixture": "TestMaduinOrchestrationParity", "prompts": "TestMaduinOrchestrationParity",
+		"planner": "TestMaduinOrchestrationParity", "plan": "TestMaduinOrchestrationParity",
+		"no": "TestMaduinOrchestrationParity", "lifecycle": "TestMaduinOrchestrationParity",
+		"install": "TestMaduinOrchestrationParity", "final": "TestMaduinOrchestrationParity",
+		"check": "TestMaduinOrchestrationParity", "bootstrap": "TestMaduinOrchestrationParity",
 		"session": "TestMaduinAgentParity", "kiro": "TestMaduinAgentParity", "backend": "TestMaduinAgentParity",
 		"pipeline": "TestMaduinPipelineParity", "repair": "TestMaduinPipelineParity", "stamp": "TestMaduinStampParity", "review": "TestMaduinReviewParity", "decomp": "TestMaduinDecompParity",
 	}

@@ -225,10 +225,15 @@ type parityMutationSample struct {
 var parityMutationSamples = []parityMutationSample{
 	{"config Kiro tier", "maduin-test-config-difficulty-model-kiro-tiers", "TestMaduinConfigParity/maduin-test-config-difficulty-model-kiro-tiers"},
 	{"logging level filter", "maduin-test-log-respects-level", "TestMaduinLoggingParity/maduin-test-log-respects-level"},
+	{"main daemon lifecycle", "maduin-test-main-stop-tears-down", "TestMaduinOrchestrationParity/maduin-test-main-stop-tears-down"},
+	{"designer repo dispatch", "maduin-test-designer-design-and-epic-dispatch-repo", "TestMaduinOrchestrationParity/maduin-test-designer-design-and-epic-dispatch-repo"},
 }
 
 func TestParityMutationSamplesRemainBound(t *testing.T) {
 	counterparts := SubstrateCounterparts()
+	for invariant, counterpart := range OrchestrationCounterparts() {
+		counterparts[invariant] = counterpart
+	}
 	for _, sample := range parityMutationSamples {
 		if got := counterparts[sample.invariant]; got != sample.counterpart {
 			t.Errorf("%s counterpart = %q, want %q", sample.name, got, sample.counterpart)

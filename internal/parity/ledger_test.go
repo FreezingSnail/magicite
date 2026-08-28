@@ -17,13 +17,17 @@ func TestLoadLedgerJustifiesDomains(t *testing.T) {
 	if ok, reason := ledger.Justified("maduin-test-dispatch-queue-ready-entry"); ok || reason != "" {
 		t.Fatalf("Justified(dispatch) = %t, %q", ok, reason)
 	}
-	want := []Divergence{
-		{Target: "cockpit", Reason: "Magicite is headless and does not reproduce the Emacs cockpit UI.", Owner: "magicite-5o2.2"},
-		{Target: "terminal", Reason: "Magicite is headless and does not reproduce the Emacs terminal UI.", Owner: "magicite-5o2.2"},
-		{Target: goldenArgvTraceTarget, Reason: "Maduin is not executed because the default suite must remain offline and require neither Emacs nor a local maduin checkout; passing goldens establish magicite argv stability only, not argv equivalence with maduin.", Owner: "magicite-e85.5"},
+	if ok, reason := ledger.Justified("maduin-test-handoff-write-read"); !ok || !strings.Contains(reason, "handoff-note") {
+		t.Fatalf("Justified(handoff) = %t, %q", ok, reason)
 	}
-	if got := ledger.Reasons(); !reflect.DeepEqual(got, want) {
-		t.Fatalf("Reasons() = %#v, want %#v", got, want)
+	found := false
+	for _, divergence := range ledger.Reasons() {
+		if divergence.Target == "maduin-test-main-keymap-bindings" {
+			found = divergence.Owner == "magicite-e85.12" && strings.Contains(divergence.Reason, "keymap")
+		}
+	}
+	if !found {
+		t.Fatal("named keymap divergence is missing")
 	}
 }
 

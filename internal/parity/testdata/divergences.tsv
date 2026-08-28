@@ -2,3 +2,17 @@
 cockpit	Magicite is headless and does not reproduce the Emacs cockpit UI.	magicite-5o2.2
 terminal	Magicite is headless and does not reproduce the Emacs terminal UI.	magicite-5o2.2
 golden-argv-traces	Maduin is not executed because the default suite must remain offline and require neither Emacs nor a local maduin checkout; passing goldens establish magicite argv stability only, not argv equivalence with maduin.	magicite-e85.5
+maduin-test-handoff-write-read	Magicite has no handoff-note store; daemon session state is not a user-authored handoff document.	magicite-e85.12
+maduin-test-handoff-read-missing	Magicite has no handoff-note store or missing-note read operation.	magicite-e85.12
+maduin-test-handoff-cache-under-project-root	Magicite does not cache handoff Markdown below repository roots.	magicite-e85.12
+maduin-test-bootstrap-no-error	Magicite has no Emacs bootstrap command; daemon configuration is loaded by daemon.Assemble.	magicite-e85.12
+maduin-test-designer-drop-in-delegates-repo	Magicite has no interactive terminal drop-in transport for designer sessions.	magicite-e85.12
+maduin-test-designer-interactive-repo-failure-opens-nothing	Magicite has no Emacs interactive repository picker or terminal buffer to open.	magicite-e85.12
+maduin-test-concierge-summon	Magicite configures concierge agents but has no interactive terminal summon command.	magicite-e85.12
+maduin-test-concierge-dismiss	Magicite has no interactive concierge terminal or handoff dismissal operation.	magicite-e85.12
+maduin-test-main-interactive-commands	Magicite exposes daemon controls through CLI commands rather than Emacs interactive commands.	magicite-e85.12
+maduin-test-main-keymap-bindings	Magicite is headless and has no Emacs keymap.	magicite-e85.12
+maduin-test-main-bootstrap-empty-registry-hints-bd-init	Magicite has no Emacs bootstrap message channel or bd init hint command.	magicite-e85.12
+maduin-test-install-script-wires-kiro-agents	Magicite does not ship Maduin install.sh links into Emacs agent directories.	magicite-e85.12
+maduin-test-check-sh-focused-modes-bypass-full-suite	Magicite has no Maduin Emacs-focused check.sh modes.	magicite-e85.12
+maduin-test-designer-decompose-command-is-bound	Magicite has no Emacs command binding for designer decomposition.	magicite-e85.12

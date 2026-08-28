@@ -7,18 +7,18 @@ import "fmt"
 // where maduin named the corresponding layers pipeline and review.
 func OrchestrationCounterparts() map[string]string {
 	owners := map[string]string{
-		"dispatch": "TestMaduinDispatchParity", "designer": "TestMaduinDispatchParity",
-		"concierge": "TestMaduinDispatchParity", "handoff": "TestMaduinDispatchParity",
-		"main": "TestMaduinDispatchParity", "fixture": "TestMaduinDispatchParity",
-		"repair": "TestMaduinPipelineParity", "prompts": "TestMaduinDispatchParity",
-		"planner": "TestMaduinDispatchParity", "plan": "TestMaduinDispatchParity",
-		"no": "TestMaduinDispatchParity", "lifecycle": "TestMaduinDispatchParity",
-		"install": "TestMaduinDispatchParity", "final": "TestMaduinDispatchParity",
-		"check": "TestMaduinDispatchParity", "bootstrap": "TestMaduinDispatchParity",
-		"session": "TestMaduinAgentParity", "kiro": "TestMaduinAgentParity",
-		"backend": "TestMaduinAgentParity", "pipeline": "TestMaduinPipelineParity",
-		"stamp": "TestMaduinStampParity", "review": "TestMaduinReviewParity",
-		"decomp": "TestMaduinDecompParity",
+		"dispatch": "TestMaduinDispatchParity",
+		"designer": "TestMaduinOrchestrationParity", "concierge": "TestMaduinOrchestrationParity",
+		"handoff": "TestMaduinOrchestrationParity", "main": "TestMaduinOrchestrationParity",
+		"fixture": "TestMaduinOrchestrationParity", "prompts": "TestMaduinOrchestrationParity",
+		"planner": "TestMaduinOrchestrationParity", "plan": "TestMaduinOrchestrationParity",
+		"no": "TestMaduinOrchestrationParity", "lifecycle": "TestMaduinOrchestrationParity",
+		"install": "TestMaduinOrchestrationParity", "final": "TestMaduinOrchestrationParity",
+		"check": "TestMaduinOrchestrationParity", "bootstrap": "TestMaduinOrchestrationParity",
+		"repair": "TestMaduinPipelineParity", "session": "TestMaduinAgentParity",
+		"kiro": "TestMaduinAgentParity", "backend": "TestMaduinAgentParity",
+		"pipeline": "TestMaduinPipelineParity", "stamp": "TestMaduinStampParity",
+		"review": "TestMaduinReviewParity", "decomp": "TestMaduinDecompParity",
 	}
 
 	catalog, err := LoadCatalog()
