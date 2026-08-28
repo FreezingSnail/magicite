@@ -2,7 +2,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"flag"
@@ -16,8 +15,9 @@ import (
 	"time"
 
 	"github.com/FreezingSnail/magicite/internal/config"
-	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/logging"
 	"github.com/FreezingSnail/magicite/internal/server"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 func main() {
@@ -31,7 +31,6 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		usage(stderr)
 		return 2
 	}
-
 	switch args[0] {
 	case "serve":
 		return serve(ctx, args[1:], stderr)
@@ -53,12 +52,17 @@ func serve(ctx context.Context, args []string, stderr io.Writer) int {
 	if flags.Parse(args) != nil || flags.NArg() != 0 {
 		return 2
 	}
-	cfg, err := config.Load(*configPath)
-	if err != nil {
+	if _, err := config.Load(*configPath); err != nil {
 		fmt.Fprintf(stderr, "load config: %v\n", err)
 		return 1
 	}
-	if err := server.Serve(ctx, *socket, cfg, nil, repo.New(cfg)); err != nil {
+	router := server.NewRouter(logging.Logger{})
+	_ = router.Register("status", func(context.Context, json.RawMessage) (any, error) {
+		return struct {
+			State string `json:"status"`
+		}{State: "running"}, nil
+	})
+	if err := server.Serve(ctx, server.Deps{Router: router, Bus: server.NewBus(1024), Socket: *socket}); err != nil {
 		fmt.Fprintf(stderr, "serve: %v\n", err)
 		return 1
 	}
@@ -73,17 +77,17 @@ func status(args []string, stdout, stderr io.Writer) int {
 	if flags.Parse(args) != nil || flags.NArg() != 0 {
 		return 2
 	}
-
-	conn, err := dial(*socket)
+	response, err := request(*socket, "status", nil)
 	if err != nil {
 		return unreachable(stderr, err)
 	}
-	defer conn.Close()
-	if err := json.NewEncoder(conn).Encode(map[string]string{"command": "status"}); err != nil {
-		return unreachable(stderr, err)
+	if response.Err != nil {
+		return unreachable(stderr, fmt.Errorf("%s", response.Err.Message))
 	}
-	var snapshot server.Status
-	if err := json.NewDecoder(conn).Decode(&snapshot); err != nil {
+	var snapshot struct {
+		State string `json:"status"`
+	}
+	if err := json.Unmarshal(response.Result, &snapshot); err != nil {
 		return unreachable(stderr, err)
 	}
 	if *asJSON {
@@ -103,16 +107,14 @@ func tail(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if flags.Parse(args) != nil || flags.NArg() != 0 {
 		return 2
 	}
-
 	conn, err := dial(*socket)
 	if err != nil {
 		return unreachable(stderr, err)
 	}
 	defer conn.Close()
-	if err := json.NewEncoder(conn).Encode(map[string]string{"command": "tail"}); err != nil {
+	if err := wire.NewEncoder(conn).Encode(wire.Request{Schema: wire.Schema, ID: "tail", Command: "subscribe"}); err != nil {
 		return unreachable(stderr, err)
 	}
-
 	done := make(chan struct{})
 	defer close(done)
 	go func() {
@@ -122,39 +124,48 @@ func tail(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		case <-done:
 		}
 	}()
-
-	reader := bufio.NewScanner(conn)
-	for reader.Scan() {
-		line := reader.Bytes()
-		var ready struct {
-			Ready bool `json:"ready"`
+	decoder := wire.NewDecoder(conn)
+	for {
+		frame, err := decoder.Frame()
+		if err != nil {
+			if ctx.Err() != nil {
+				return 0
+			}
+			return unreachable(stderr, err)
 		}
-		if json.Unmarshal(line, &ready) == nil && ready.Ready {
+		if frame.Event == nil {
 			continue
 		}
 		if *asJSON {
-			_, _ = stdout.Write(append(append([]byte(nil), line...), '\n'))
-			continue
-		}
-		if _, err := fmt.Fprintln(stdout, renderEvent(line)); err != nil {
+			encoded, _ := json.Marshal(frame.Event)
+			_, _ = fmt.Fprintln(stdout, string(encoded))
+		} else if _, err := fmt.Fprintln(stdout, frame.Event.Kind); err != nil {
 			return 1
 		}
 	}
-	if ctx.Err() != nil {
-		return 0
+}
+
+func request(socket, command string, params json.RawMessage) (wire.Response, error) {
+	conn, err := dial(socket)
+	if err != nil {
+		return wire.Response{}, err
 	}
-	if err := reader.Err(); err != nil {
-		return unreachable(stderr, err)
+	defer conn.Close()
+	if err := wire.NewEncoder(conn).Encode(wire.Request{Schema: wire.Schema, ID: "command", Command: command, Params: params}); err != nil {
+		return wire.Response{}, err
 	}
-	return 0
+	frame, err := wire.NewDecoder(conn).Frame()
+	if err != nil {
+		return wire.Response{}, err
+	}
+	if frame.Response == nil {
+		return wire.Response{}, fmt.Errorf("daemon sent event instead of response")
+	}
+	return *frame.Response, nil
 }
 
 func dial(socket string) (net.Conn, error) {
-	conn, err := net.DialTimeout("unix", socket, time.Second)
-	if err != nil {
-		return nil, err
-	}
-	return conn, nil
+	return net.DialTimeout("unix", socket, time.Second)
 }
 
 func unreachable(stderr io.Writer, err error) int {
@@ -162,37 +173,17 @@ func unreachable(stderr io.Writer, err error) int {
 	return 1
 }
 
-func renderEvent(line []byte) string {
-	var event struct {
-		Sequence uint64          `json:"sequence"`
-		Level    string          `json:"level"`
-		Kind     string          `json:"kind"`
-		Fields   json.RawMessage `json:"fields"`
-	}
-	if err := json.Unmarshal(line, &event); err != nil {
-		return string(line)
-	}
-	return fmt.Sprintf("sequence=%d level=%s kind=%q fields=%s", event.Sequence, event.Level, event.Kind, event.Fields)
-}
-
 func defaultSocket() string {
 	if socket := os.Getenv("MAGICITE_SOCKET"); socket != "" {
 		return socket
 	}
-	if runtime := os.Getenv("XDG_RUNTIME_DIR"); runtime != "" {
-		return filepath.Join(runtime, "magicite.sock")
-	}
-	cache, err := os.UserCacheDir()
-	if err != nil {
-		return filepath.Join(".", "magicite.sock")
-	}
-	return filepath.Join(cache, "magicite", "magicite.sock")
+	return server.SocketPath(config.Config{})
 }
 
 func defaultConfig() string {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
-		return filepath.Join(".", "magicite.yaml")
+		return "magicite.yaml"
 	}
 	return filepath.Join(configDir, "magicite", "config.yaml")
 }

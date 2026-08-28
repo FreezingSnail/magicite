@@ -1,73 +1,43 @@
 package server
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
-	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/config"
 	"github.com/FreezingSnail/magicite/internal/logging"
-	"github.com/FreezingSnail/magicite/internal/repo"
-	"github.com/FreezingSnail/magicite/internal/repotest"
-	"github.com/FreezingSnail/magicite/internal/state"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
-var socketSequence atomic.Uint64
-
-func testSocket(t *testing.T) string {
+func startProtocolServer(t *testing.T, router *Router, bus *Bus) (string, context.CancelFunc, <-chan error) {
 	t.Helper()
-	path, err := filepath.Abs(fmt.Sprintf(".magicite-server-%d-%d.sock", os.Getpid(), socketSequence.Add(1)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Remove(path) })
-	return path
-}
-
-func startServer(t *testing.T, lookups ...repo.Lookup) (context.CancelFunc, string, <-chan error) {
-	t.Helper()
-	lookup := repo.Lookup(repotest.New())
-	if len(lookups) > 0 {
-		lookup = lookups[0]
-	}
 	ctx, cancel := context.WithCancel(context.Background())
-	socket := testSocket(t)
+	directory := fmt.Sprintf(".magicite-server-%d", time.Now().UnixNano())
+	t.Cleanup(func() { _ = os.RemoveAll(directory) })
+	path := filepath.Join(directory, "magicite.sock")
 	done := make(chan error, 1)
-	go func() { done <- Serve(ctx, socket, config.Default(), state.Default(), lookup) }()
-	deadline := time.Now().Add(time.Second)
-	for {
-		if _, err := os.Stat(socket); err == nil {
-			return cancel, socket, done
+	go func() {
+		done <- Serve(ctx, Deps{Router: router, Bus: bus, Log: *logging.New(logging.Config{}), Socket: path})
+	}()
+	for deadline := time.Now().Add(time.Second); ; time.Sleep(time.Millisecond) {
+		if _, err := os.Stat(path); err == nil {
+			return path, cancel, done
 		}
 		if time.Now().After(deadline) {
 			cancel()
-			t.Fatalf("server did not create %s", socket)
+			t.Fatal("server did not start")
 		}
-		time.Sleep(time.Millisecond)
 	}
 }
 
-func clientRequest(t *testing.T, socket, command string) net.Conn {
-	t.Helper()
-	conn, err := net.Dial("unix", socket)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := json.NewEncoder(conn).Encode(map[string]string{"command": command}); err != nil {
-		_ = conn.Close()
-		t.Fatal(err)
-	}
-	return conn
-}
-
-func stopServer(t *testing.T, cancel context.CancelFunc, done <-chan error) {
+func stopProtocolServer(t *testing.T, path string, cancel context.CancelFunc, done <-chan error) {
 	t.Helper()
 	cancel()
 	select {
@@ -78,145 +48,123 @@ func stopServer(t *testing.T, cancel context.CancelFunc, done <-chan error) {
 	case <-time.After(time.Second):
 		t.Fatal("server did not stop")
 	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("socket remains: %v", err)
+	}
 }
 
-func TestServeStatusAndSocketMode(t *testing.T) {
-	cancel, socket, done := startServer(t)
-	defer stopServer(t, cancel, done)
+func TestServeRejectsMissingDependencies(t *testing.T) {
+	for _, test := range []struct {
+		deps  Deps
+		field string
+	}{{field: "Router"}, {deps: Deps{Router: NewRouter(logging.Logger{})}, field: "Bus"}, {deps: Deps{Router: NewRouter(logging.Logger{}), Bus: NewBus(1)}, field: "Socket"}} {
+		err := Serve(context.Background(), test.deps)
+		var dependency *DepsError
+		if !errors.As(err, &dependency) || dependency.Field != test.field {
+			t.Errorf("Serve(%+v) error = %v, want field %q", test.deps, err, test.field)
+		}
+	}
+}
 
-	info, err := os.Stat(socket)
+func TestServeRoutesOrderedRequests(t *testing.T) {
+	router := NewRouter(logging.Logger{})
+	if err := router.Register("echo", func(_ context.Context, params json.RawMessage) (any, error) { return string(params), nil }); err != nil {
+		t.Fatal(err)
+	}
+	path, cancel, done := startProtocolServer(t, router, NewBus(8))
+	defer stopProtocolServer(t, path, cancel, done)
+	conn, err := net.Dial("unix", path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if mode := info.Mode().Perm(); mode != 0o600 {
-		t.Fatalf("socket mode = %o, want 600", mode)
-	}
-
-	conn := clientRequest(t, socket, "status")
 	defer conn.Close()
-	var got Status
-	if err := json.NewDecoder(conn).Decode(&got); err != nil {
-		t.Fatal(err)
+	encoder, decoder := wire.NewEncoder(conn), wire.NewDecoder(conn)
+	for _, id := range []string{"one", "two"} {
+		if err := encoder.Encode(wire.Request{Schema: wire.Schema, ID: id, Command: "echo", Params: json.RawMessage(`"ok"`)}); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if got.State != "running" || got.PID != os.Getpid() {
-		t.Fatalf("status = %+v", got)
+	for _, id := range []string{"one", "two"} {
+		frame, err := decoder.Frame()
+		if err != nil || frame.Response == nil || frame.Response.ID != id {
+			t.Fatalf("response = %#v, %v; want %q", frame, err, id)
+		}
 	}
 }
 
-func TestServeBroadcastsEventsAndDropsSlowSubscriber(t *testing.T) {
-	cancel, socket, done := startServer(t)
-	defer stopServer(t, cancel, done)
-
-	first := clientRequest(t, socket, "tail")
-	defer first.Close()
-	second := clientRequest(t, socket, "tail")
-	defer second.Close()
-	firstReader := bufio.NewReader(first)
-	secondReader := bufio.NewReader(second)
-	for _, reader := range []*bufio.Reader{firstReader, secondReader} {
-		line, err := reader.ReadString('\n')
-		if err != nil || line != "{\"ready\":true}\n" {
-			t.Fatalf("tail ready = %q, %v", line, err)
-		}
+func TestServeSubscribeStreamsAndConflicts(t *testing.T) {
+	router := NewRouter(logging.Logger{})
+	bus := NewBus(8)
+	path, cancel, done := startProtocolServer(t, router, bus)
+	defer stopProtocolServer(t, path, cancel, done)
+	conn, err := net.Dial("unix", path)
+	if err != nil {
+		t.Fatal(err)
 	}
-	logging.Event(logging.Info, "test.broadcast", map[string]any{"value": 1})
-
-	for _, reader := range []*bufio.Reader{firstReader, secondReader} {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			t.Fatal(err)
-		}
-		var event struct{ Kind string }
-		if err := json.Unmarshal([]byte(line), &event); err != nil {
-			t.Fatal(err)
-		}
-		if event.Kind != "test.broadcast" {
-			t.Fatalf("kind = %q", event.Kind)
-		}
+	defer conn.Close()
+	encoder, decoder := wire.NewEncoder(conn), wire.NewDecoder(conn)
+	if err := encoder.Encode(wire.Request{Schema: wire.Schema, ID: "subscribe", Command: "subscribe", Params: json.RawMessage(`{"since":1}`)}); err != nil {
+		t.Fatal(err)
 	}
-
-	slow := clientRequest(t, socket, "tail")
-	defer slow.Close()
-	slowReader := bufio.NewReader(slow)
-	if line, err := slowReader.ReadString('\n'); err != nil || line != "{\"ready\":true}\n" {
-		t.Fatalf("slow tail ready = %q, %v", line, err)
+	bus.Publish(wire.Event{Kind: wire.KindPickup, Level: "info"})
+	frame, err := decoder.Frame()
+	if err != nil || frame.Event == nil || frame.Event.Kind != wire.KindPickup {
+		t.Fatalf("event = %#v, %v", frame, err)
 	}
+	if err := encoder.Encode(wire.Request{Schema: wire.Schema, ID: "next", Command: "status"}); err != nil {
+		t.Fatal(err)
+	}
+	frame, err = decoder.Frame()
+	if err != nil || frame.Response == nil || frame.Response.Err == nil || frame.Response.Err.Code != wire.CodeConflict {
+		t.Fatalf("conflict = %#v, %v", frame, err)
+	}
+	bus.Publish(wire.Event{Kind: wire.KindComplete, Level: "info"})
+	frame, err = decoder.Frame()
+	if err != nil || frame.Event == nil || frame.Event.Kind != wire.KindComplete {
+		t.Fatalf("continued event = %#v, %v", frame, err)
+	}
+}
+
+func TestServeBadRequestStaysOpenAndSchemaCloses(t *testing.T) {
+	router := NewRouter(logging.Logger{})
+	path, cancel, done := startProtocolServer(t, router, NewBus(8))
+	defer stopProtocolServer(t, path, cancel, done)
+	conn, err := net.Dial("unix", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if _, err := conn.Write([]byte("not json\n")); err != nil {
+		t.Fatal(err)
+	}
+	decoder := wire.NewDecoder(conn)
+	frame, err := decoder.Frame()
+	if err != nil || frame.Response == nil || frame.Response.Err.Code != wire.CodeBadRequest {
+		t.Fatalf("bad request = %#v, %v", frame, err)
+	}
+	if err := wire.NewEncoder(conn).Encode(wire.Request{Schema: 99, ID: "old"}); err != nil {
+		t.Fatal(err)
+	}
+	frame, err = decoder.Frame()
+	if err != nil || frame.Response == nil || frame.Response.Err.Code != wire.CodeSchemaMismatch {
+		t.Fatalf("schema response = %#v, %v", frame, err)
+	}
+	_, err = decoder.Frame()
+	if !errors.Is(err, io.EOF) {
+		t.Fatalf("connection remained after schema mismatch: %v", err)
+	}
+}
+
+func TestServeShutdownDrainsHungConnection(t *testing.T) {
+	path, cancel, done := startProtocolServer(t, NewRouter(logging.Logger{}), NewBus(8))
+	conn, err := net.Dial("unix", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
 	started := time.Now()
-	for i := 0; i < 64; i++ {
-		logging.Event(logging.Info, "test.slow", map[string]any{"payload": string(make([]byte, 2048))})
-	}
+	stopProtocolServer(t, path, cancel, done)
 	if elapsed := time.Since(started); elapsed > time.Second {
-		t.Fatalf("slow subscriber stalled logging for %s", elapsed)
-	}
-}
-
-func TestServeRemovesSocketOnCancellation(t *testing.T) {
-	cancel, socket, done := startServer(t)
-	stopServer(t, cancel, done)
-	if _, err := os.Stat(socket); !os.IsNotExist(err) {
-		t.Fatalf("socket remains after shutdown: %v", err)
-	}
-}
-
-func TestServeReposAndRoute(t *testing.T) {
-	first, ok := repo.Make("first", "first", "first", "trunk")
-	if !ok {
-		t.Fatal("first repository is invalid")
-	}
-	second, ok := repo.Make("second", "second", "second", "main")
-	if !ok {
-		t.Fatal("second repository is invalid")
-	}
-	lookup := repotest.New(first, second)
-	cancel, socket, done := startServer(t, lookup)
-	defer stopServer(t, cancel, done)
-
-	conn := clientRequest(t, socket, "repos")
-	defer conn.Close()
-	var listed struct {
-		Repos []RepoView `json:"repos"`
-	}
-	if err := json.NewDecoder(conn).Decode(&listed); err != nil {
-		t.Fatal(err)
-	}
-	if len(listed.Repos) != 2 || listed.Repos[0] != (RepoView{Name: first.Name, Root: first.Root, Prefix: first.Prefix, Branch: first.Branch}) || listed.Repos[1] != (RepoView{Name: second.Name, Root: second.Root, Prefix: second.Prefix, Branch: second.Branch}) {
-		t.Fatalf("repos = %+v", listed.Repos)
-	}
-	if got := lookup.Refreshes(); got != 1 {
-		t.Fatalf("refreshes = %d, want 1", got)
-	}
-
-	route, err := net.Dial("unix", socket)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer route.Close()
-	if err := json.NewEncoder(route).Encode(request{Command: "route", ID: "second-123"}); err != nil {
-		t.Fatal(err)
-	}
-	var routed struct {
-		Repo RepoView `json:"repo"`
-	}
-	if err := json.NewDecoder(route).Decode(&routed); err != nil {
-		t.Fatal(err)
-	}
-	if routed.Repo != (RepoView{Name: second.Name, Root: second.Root, Prefix: second.Prefix, Branch: second.Branch}) {
-		t.Fatalf("route = %+v", routed.Repo)
-	}
-
-	missing, err := net.Dial("unix", socket)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer missing.Close()
-	if err := json.NewEncoder(missing).Encode(request{Command: "route", ID: "missing-123"}); err != nil {
-		t.Fatal(err)
-	}
-	var notFound map[string]string
-	if err := json.NewDecoder(missing).Decode(&notFound); err != nil {
-		t.Fatal(err)
-	}
-	if notFound["error"] != "not found" {
-		t.Fatalf("route error = %+v", notFound)
+		t.Fatalf("shutdown blocked for %s", elapsed)
 	}
 }

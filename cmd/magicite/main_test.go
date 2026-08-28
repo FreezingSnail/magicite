@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,8 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/config"
-	"github.com/FreezingSnail/magicite/internal/repotest"
+	"github.com/FreezingSnail/magicite/internal/logging"
 	"github.com/FreezingSnail/magicite/internal/server"
 )
 
@@ -29,9 +29,17 @@ func cliSocket(t *testing.T) string {
 
 func TestStatusJSONAndUnreachableExit(t *testing.T) {
 	socket := cliSocket(t)
+	router := server.NewRouter(logging.Logger{})
+	if err := router.Register("status", func(context.Context, json.RawMessage) (any, error) {
+		return struct {
+			State string `json:"status"`
+		}{State: "running"}, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- server.Serve(ctx, socket, config.Default(), nil, repotest.New()) }()
+	go func() { done <- server.Serve(ctx, server.Deps{Router: router, Bus: server.NewBus(8), Socket: socket}) }()
 	defer func() {
 		cancel()
 		select {

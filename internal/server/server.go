@@ -1,4 +1,4 @@
-// Package server owns magicite's headless daemon lifecycle and local socket API.
+// Package server owns magicite's local daemon protocol.
 package server
 
 import (
@@ -9,273 +9,239 @@ import (
 	"io"
 	"net"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/config"
 	"github.com/FreezingSnail/magicite/internal/logging"
-	"github.com/FreezingSnail/magicite/internal/repo"
-	"github.com/FreezingSnail/magicite/internal/state"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
-const repoTimeout = 30 * time.Second
+const shutdownGrace = 250 * time.Millisecond
 
-const statusKey = "magicite.server.status"
+// Deps supplies the protocol server dependencies.
+type Deps struct {
+	Router *Router
+	Bus    *Bus
+	Log    logging.Logger
+	Socket string
+}
 
-// Serve listens on socket until ctx is cancelled. It owns the socket for its
-// lifetime, exposes status and tail requests, and broadcasts logging events to
-// tail subscribers without allowing a slow subscriber to block event producers.
-func Serve(ctx context.Context, socket string, cfg config.Config, store *state.Store, repos repo.Lookup) error {
+// DepsError identifies a missing server dependency.
+type DepsError struct{ Field string }
+
+func (e *DepsError) Error() string { return fmt.Sprintf("server: %s is required", e.Field) }
+
+// Serve accepts wire requests until ctx is cancelled.
+func Serve(ctx context.Context, d Deps) error {
+	if d.Router == nil {
+		return &DepsError{Field: "Router"}
+	}
+	if d.Bus == nil {
+		return &DepsError{Field: "Bus"}
+	}
+	if d.Socket == "" {
+		return &DepsError{Field: "Socket"}
+	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if socket == "" {
-		return errors.New("server socket path is empty")
-	}
-	if store == nil {
-		store = state.Default()
-	}
-	if repos == nil {
-		repos = repo.New(cfg)
-	}
-	if err := prepareSocket(socket); err != nil {
+
+	listener, err := Listen(d.Socket)
+	if err != nil {
 		return err
 	}
-
-	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: socket, Net: "unix"})
-	if err != nil {
-		return fmt.Errorf("listen on %q: %w", socket, err)
-	}
-	if err := os.Chmod(socket, 0o600); err != nil {
-		_ = listener.Close()
-		_ = os.Remove(socket)
-		return fmt.Errorf("secure socket %q: %w", socket, err)
-	}
-
-	d := &daemon{
-		ctx:      ctx,
-		listener: listener,
-		store:    store,
-		repos:    repos,
-		status: Status{
-			State:   "running",
-			PID:     os.Getpid(),
-			Harness: cfg.Harness.Name,
-			Version: cfg.Harness.Version,
-		},
-		connections: make(map[net.Conn]struct{}),
-		subscribers: make(map[*subscriber]struct{}),
-	}
-	store.Put(statusKey, d.status)
-	logging.Configure(logging.Config{Level: logging.Debug, Format: logging.JSON, Writer: io.MultiWriter(os.Stderr, d)})
-	logging.Event(logging.Info, "serve.started", map[string]any{"socket": socket})
-	refreshCtx, cancelRefresh := context.WithTimeout(ctx, repoTimeout)
-	discovered := repos.Refresh(refreshCtx)
-	cancelRefresh()
-	if len(discovered) == 0 {
-		logging.Event(logging.Warn, "repos.discovered", map[string]any{"count": 0, "reason": "none-admitted"})
-	} else {
-		logging.Event(logging.Info, "repos.discovered", map[string]any{"count": len(discovered), "names": repoNames(discovered)})
-	}
-
-	defer func() {
-		logging.Event(logging.Info, "serve.stopped", nil)
-		d.closeAll()
-		_ = listener.Close()
-		_ = os.Remove(socket)
-		store.Invalidate(statusKey)
-	}()
+	daemon := &daemon{ctx: ctx, deps: d, listener: listener, connections: make(map[net.Conn]struct{}), subscriptions: make(map[*Subscription]struct{})}
+	d.Bus.Publish(wire.Event{Kind: wire.KindWarn, Level: "info", Fields: map[string]string{"event": "serve", "socket": d.Socket}})
 
 	go func() {
 		<-ctx.Done()
 		_ = listener.Close()
-		d.closeAll()
 	}()
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			if ctx.Err() != nil || errors.Is(err, net.ErrClosed) {
+				daemon.shutdown()
+				_ = os.Remove(d.Socket)
 				return nil
 			}
-			return fmt.Errorf("accept connection: %w", err)
+			_ = listener.Close()
+			_ = os.Remove(d.Socket)
+			return fmt.Errorf("server: accept: %w", err)
 		}
-		d.addConnection(conn)
-		go d.handle(conn)
+		daemon.add(conn)
+		daemon.group.Add(1)
+		go func() {
+			defer daemon.group.Done()
+			daemon.handle(conn)
+		}()
 	}
-}
-
-// Status is the daemon snapshot returned by a status request.
-type Status struct {
-	State   string `json:"status"`
-	PID     int    `json:"pid"`
-	Harness string `json:"harness,omitempty"`
-	Version string `json:"version,omitempty"`
-}
-
-type request struct {
-	Command string `json:"command"`
-	ID      string `json:"id"`
 }
 
 type daemon struct {
 	ctx      context.Context
-	listener *net.UnixListener
-	store    *state.Store
-	repos    repo.Lookup
-	status   Status
+	deps     Deps
+	listener net.Listener
 
-	mu          sync.Mutex
-	connections map[net.Conn]struct{}
-	subscribers map[*subscriber]struct{}
+	mu            sync.Mutex
+	connections   map[net.Conn]struct{}
+	subscriptions map[*Subscription]struct{}
+	group         sync.WaitGroup
 }
 
-type subscriber struct {
-	conn   net.Conn
-	events chan []byte
-	done   chan struct{}
-}
-
-func prepareSocket(socket string) error {
-	if err := os.MkdirAll(filepath.Dir(socket), 0o700); err != nil {
-		return fmt.Errorf("create socket directory: %w", err)
-	}
-	info, err := os.Lstat(socket)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("inspect socket %q: %w", socket, err)
-	}
-	if info.Mode()&os.ModeSocket == 0 {
-		return fmt.Errorf("refusing to replace non-socket %q", socket)
-	}
-	if err := os.Remove(socket); err != nil {
-		return fmt.Errorf("remove stale socket %q: %w", socket, err)
-	}
-	return nil
-}
-
-func (d *daemon) addConnection(conn net.Conn) {
+func (d *daemon) add(conn net.Conn) {
 	d.mu.Lock()
-	defer d.mu.Unlock()
 	d.connections[conn] = struct{}{}
+	d.mu.Unlock()
+}
+
+func (d *daemon) remove(conn net.Conn) {
+	d.mu.Lock()
+	delete(d.connections, conn)
+	d.mu.Unlock()
+	_ = conn.Close()
 }
 
 func (d *daemon) handle(conn net.Conn) {
-	defer func() {
-		d.mu.Lock()
-		delete(d.connections, conn)
-		d.mu.Unlock()
-		_ = conn.Close()
-	}()
-
-	_ = conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-	var request request
-	if err := json.NewDecoder(conn).Decode(&request); err != nil {
-		return
+	defer d.remove(conn)
+	decoder := wire.NewDecoder(conn)
+	encoder := wire.NewEncoder(conn)
+	for {
+		request, err := decoder.Request()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return
+			}
+			if errors.Is(err, wire.ErrSchema) {
+				_ = encoder.Encode(errorResponse("", wire.CodeSchemaMismatch, err.Error()))
+				return
+			}
+			if encoder.Encode(errorResponse("", wire.CodeBadRequest, err.Error())) != nil {
+				return
+			}
+			continue
+		}
+		if request.Command == "subscribe" {
+			if d.stream(conn, decoder, encoder, request) {
+				return
+			}
+			continue
+		}
+		if encoder.Encode(d.deps.Router.Handle(d.ctx, request)) != nil {
+			return
+		}
 	}
-	_ = conn.SetReadDeadline(time.Time{})
+}
 
-	switch request.Command {
-	case "status":
-		_ = json.NewEncoder(conn).Encode(d.currentStatus())
-	case "repos":
-		requestCtx, cancel := context.WithTimeout(d.ctx, repoTimeout)
-		defer cancel()
-		_ = json.NewEncoder(conn).Encode(struct {
-			Repos []RepoView `json:"repos"`
-		}{Repos: repoViews(d.repos.List(requestCtx))})
-	case "route":
-		requestCtx, cancel := context.WithTimeout(d.ctx, repoTimeout)
-		defer cancel()
-		record, err := d.repos.ForBead(requestCtx, request.ID)
-		if repo.IsNotFound(err) {
-			_ = json.NewEncoder(conn).Encode(map[string]string{"error": "not found"})
+// stream owns all writes while a connection has entered subscribe mode. It
+// keeps reading requests so conflicts do not interrupt event delivery.
+func (d *daemon) stream(conn net.Conn, decoder *wire.Decoder, encoder *wire.Encoder, request wire.Request) bool {
+	var params wire.SubscribeParams
+	if len(request.Params) != 0 {
+		if err := json.Unmarshal(request.Params, &params); err != nil {
+			return encoder.Encode(errorResponse(request.ID, wire.CodeBadRequest, err.Error())) != nil
+		}
+	}
+	subscription := d.deps.Bus.Subscribe(params.Since, 64)
+	d.track(subscription)
+	defer d.untrack(subscription)
+	defer subscription.Close()
+
+	requests := make(chan decodedRequest, 1)
+	stopped := make(chan struct{})
+	defer close(stopped)
+	go readRequests(decoder, requests, stopped)
+	for {
+		select {
+		case event, ok := <-subscription.Events():
+			if !ok {
+				return true
+			}
+			if encoder.Encode(event) != nil {
+				return true
+			}
+		case next, ok := <-requests:
+			if !ok {
+				return true
+			}
+			if next.err != nil {
+				if errors.Is(next.err, io.EOF) {
+					return true
+				}
+				code := wire.CodeBadRequest
+				if errors.Is(next.err, wire.ErrSchema) {
+					code = wire.CodeSchemaMismatch
+				}
+				if encoder.Encode(errorResponse("", code, next.err.Error())) != nil || code == wire.CodeSchemaMismatch {
+					return true
+				}
+				continue
+			}
+			if encoder.Encode(errorResponse(next.request.ID, wire.CodeConflict, "connection is streaming")) != nil {
+				return true
+			}
+		case <-d.ctx.Done():
+			return true
+		}
+	}
+}
+
+type decodedRequest struct {
+	request wire.Request
+	err     error
+}
+
+func readRequests(decoder *wire.Decoder, requests chan<- decodedRequest, stopped <-chan struct{}) {
+	defer close(requests)
+	for {
+		request, err := decoder.Request()
+		select {
+		case requests <- decodedRequest{request: request, err: err}:
+		case <-stopped:
 			return
 		}
 		if err != nil {
-			_ = json.NewEncoder(conn).Encode(map[string]string{"error": err.Error()})
 			return
 		}
-		_ = json.NewEncoder(conn).Encode(struct {
-			Repo RepoView `json:"repo"`
-		}{Repo: repoViews([]repo.Repo{record})[0]})
-	case "tail":
-		subscriber := d.subscribe(conn)
-		defer d.drop(subscriber)
-		<-subscriber.done
-	default:
-		_ = json.NewEncoder(conn).Encode(map[string]string{"error": "unknown command"})
 	}
 }
 
-func (d *daemon) currentStatus() Status {
-	if snapshot, ok := d.store.Get(statusKey); ok {
-		if status, ok := snapshot.(Status); ok {
-			return status
-		}
-	}
-	return d.status
+func errorResponse(id string, code wire.Code, message string) wire.Response {
+	return wire.Response{Schema: wire.Schema, ID: id, Err: &wire.Error{Code: code, Message: message}}
 }
 
-func (d *daemon) subscribe(conn net.Conn) *subscriber {
-	subscriber := &subscriber{conn: conn, events: make(chan []byte, 16), done: make(chan struct{})}
+func (d *daemon) track(subscription *Subscription) {
 	d.mu.Lock()
-	d.subscribers[subscriber] = struct{}{}
-	subscriber.events <- []byte(`{"ready":true}` + "\n")
+	d.subscriptions[subscription] = struct{}{}
 	d.mu.Unlock()
-	go func() {
-		for event := range subscriber.events {
-			if _, err := subscriber.conn.Write(event); err != nil {
-				d.drop(subscriber)
-				return
-			}
-		}
-	}()
-	return subscriber
 }
 
-// Write implements io.Writer for logging. A full subscriber queue is closed
-// immediately, so Event callers never wait for socket I/O.
-func (d *daemon) Write(event []byte) (int, error) {
-	copyEvent := append([]byte(nil), event...)
+func (d *daemon) untrack(subscription *Subscription) {
 	d.mu.Lock()
-	defer d.mu.Unlock()
-	for subscriber := range d.subscribers {
-		select {
-		case subscriber.events <- copyEvent:
-		default:
-			d.dropLocked(subscriber)
-		}
+	delete(d.subscriptions, subscription)
+	d.mu.Unlock()
+}
+
+func (d *daemon) shutdown() {
+	d.mu.Lock()
+	for subscription := range d.subscriptions {
+		subscription.Close()
 	}
-	return len(event), nil
-}
+	d.mu.Unlock()
 
-func (d *daemon) drop(subscriber *subscriber) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	d.dropLocked(subscriber)
-}
-
-func (d *daemon) dropLocked(subscriber *subscriber) {
-	if _, ok := d.subscribers[subscriber]; !ok {
+	done := make(chan struct{})
+	go func() { d.group.Wait(); close(done) }()
+	select {
+	case <-done:
 		return
+	case <-time.After(shutdownGrace):
 	}
-	delete(d.subscribers, subscriber)
-	close(subscriber.events)
-	close(subscriber.done)
-	_ = subscriber.conn.Close()
-}
 
-func (d *daemon) closeAll() {
 	d.mu.Lock()
-	defer d.mu.Unlock()
-	for subscriber := range d.subscribers {
-		d.dropLocked(subscriber)
-	}
 	for conn := range d.connections {
 		_ = conn.Close()
 	}
+	d.mu.Unlock()
+	<-done
 }
