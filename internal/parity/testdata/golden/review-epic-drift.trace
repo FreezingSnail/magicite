@@ -1,0 +1,6 @@
+{root}/repo/ git log --reverse {sha1}..main --format=%H%x00%(trailers:key=Magicite-Task,valueonly)
+{root}/repo/ git show --format= --patch {sha2}
+{root}/repo kiro review epic-1
+{root}/repo/ bd create 'drift-fix: : repair child output' --type task --silent --parent epic-1 --body-file {root}/drift-body.md --labels drift-fix --priority P1
+{root}/repo/ bd comment drift-1 --file {root}/review-comment.md
+{root}/repo/ bd comment epic-1 --file {root}/review-comment.md

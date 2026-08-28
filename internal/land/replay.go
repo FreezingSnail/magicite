@@ -113,17 +113,15 @@ func (p *Pipeline) stampHead(ctx context.Context, c *Context, s stamp.Stamp) err
 	if err != nil {
 		return err
 	}
-	stamped := stamp.Apply(message, s.Trailers())
-	if stamped == message {
+	if stamp.Apply(message, s.Trailers()) == message {
 		return nil
 	}
-	path, cleanup, err := messageFile(stamped)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
 
-	exit, output, err := p.git(ctx, c, c.Worktree, "commit", "--amend", "-F", path)
+	args := []string{"-c", "trailer.ifexists=replaceIfDifferent", "commit", "--amend", "--no-edit"}
+	for _, trailer := range s.Trailers() {
+		args = append(args, "--trailer", trailer.Key+"="+trailer.Value)
+	}
+	exit, output, err := p.git(ctx, c, c.Worktree, args...)
 	if err != nil || exit != 0 {
 		return replayFailure("amend commit", exit, output, err)
 	}

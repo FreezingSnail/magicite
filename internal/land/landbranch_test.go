@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/FreezingSnail/magicite/internal/stamp"
@@ -40,7 +39,7 @@ func TestLandBranchOrdersStepsAndSetsStampRepo(t *testing.T) {
 		{Prefix: []string{"-C", worktree, "rev-list", "--reverse", "main..ifrit"}, Output: "tip\n"},
 		{Prefix: []string{"-C", worktree, "rev-parse", "ifrit"}, Output: "tip\n"},
 		{Prefix: []string{"-C", worktree, "log", "-1", "--format=%B", "ifrit"}, Output: "complete\n"},
-		{Prefix: []string{"-C", worktree, "commit", "--amend", "-F"}},
+		{Prefix: []string{"-C", worktree, "-c", "trailer.ifexists=replaceIfDifferent", "commit", "--amend", "--no-edit"}},
 		{Prefix: []string{"merge", "--ff-only", "ifrit"}},
 	}}}
 	pipeline := landBranchPipeline(t, root, worktree, runner, successfulGate)
@@ -66,7 +65,7 @@ func TestLandBranchOrdersStepsAndSetsStampRepo(t *testing.T) {
 		{"-C", worktree, "rev-list", "--reverse", "main..ifrit"},
 		{"-C", worktree, "rev-parse", "ifrit"},
 		{"-C", worktree, "log", "-1", "--format=%B", "ifrit"},
-		{"-C", worktree, "commit", "--amend", "-F", runner.calls[9].Args[5]},
+		{"-C", worktree, "-c", "trailer.ifexists=replaceIfDifferent", "commit", "--amend", "--no-edit", "--trailer", "Magicite-Repo=resolved", "--trailer", "Magicite-Task=magicite-ewp.10"},
 		{"merge", "--ff-only", "ifrit"},
 	})
 }
@@ -203,13 +202,10 @@ type stampInspectRunner struct {
 }
 
 func (r *stampInspectRunner) Git(ctx context.Context, dir string, args ...string) (int, string, error) {
-	if len(args) >= 6 && args[0] == "-C" && args[2] == "commit" && args[3] == "--amend" && args[4] == "-F" {
-		message, err := os.ReadFile(args[5])
-		if err != nil {
-			return -1, "", err
+	for _, arg := range args {
+		if arg == "Magicite-Repo=resolved" {
+			r.stampedRepo = true
 		}
-		r.message = string(message)
-		r.stampedRepo = strings.Contains(r.message, "Magicite-Repo: resolved")
 	}
 	return r.orderedRunner.Git(ctx, dir, args...)
 }

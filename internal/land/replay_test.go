@@ -45,7 +45,7 @@ func TestStampRangeAmendsSingleCommitFromMessageFile(t *testing.T) {
 		fakeReply{Prefix: replayArgs(c, "rev-list"), Output: "one\n"},
 		fakeReply{Prefix: replayArgs(c, "rev-parse"), Output: "tip\n"},
 		fakeReply{Prefix: replayArgs(c, "log"), Output: "subject\n"},
-		fakeReply{Prefix: replayArgs(c, "commit", "--amend")},
+		fakeReply{Prefix: replayArgs(c, "-c", "trailer.ifexists=replaceIfDifferent", "commit", "--amend", "--no-edit")},
 	)
 	runner := &messageRunner{fake: fake}
 	pipeline := replayPipeline(t, runner, nil)
@@ -59,11 +59,12 @@ func TestStampRangeAmendsSingleCommitFromMessageFile(t *testing.T) {
 		replayArgs(c, "log", "-1", "--format=%B", "ifrit"),
 	})
 	call := fake.Calls()[3].Args
-	if len(call) != 6 || !slices.Equal(call[:5], replayArgs(c, "commit", "--amend", "-F")) {
-		t.Errorf("amend args = %q, want argv-only commit --amend -F PATH", call)
+	want := replayArgs(c, "-c", "trailer.ifexists=replaceIfDifferent", "commit", "--amend", "--no-edit", "--trailer", "Magicite-Task=task")
+	if !slices.Equal(call, want) {
+		t.Errorf("amend args = %q, want %q", call, want)
 	}
-	if !slices.Equal(runner.messages, []string{"subject\n\nMagicite-Task: task\n"}) {
-		t.Errorf("message files = %q, want stamped message", runner.messages)
+	if len(runner.messages) != 0 {
+		t.Errorf("message files = %q, want none", runner.messages)
 	}
 }
 

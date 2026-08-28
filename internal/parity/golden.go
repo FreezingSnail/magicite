@@ -148,20 +148,23 @@ func isPathCharacter(value byte) bool {
 func traceRoot(entries []testenv.Entry) string {
 	var root string
 	for _, entry := range entries {
-		if !filepath.IsAbs(entry.Dir) {
-			continue
-		}
-		dir := filepath.Clean(entry.Dir)
-		if root == "" {
-			root = dir
-			continue
-		}
-		for !pathWithin(root, dir) {
-			parent := filepath.Dir(root)
-			if parent == root {
-				return ""
+		paths := append([]string{entry.Dir}, entry.Argv...)
+		for _, path := range paths {
+			if !filepath.IsAbs(path) {
+				continue
 			}
-			root = parent
+			dir := filepath.Clean(path)
+			if root == "" {
+				root = dir
+				continue
+			}
+			for !pathWithin(root, dir) {
+				parent := filepath.Dir(root)
+				if parent == root {
+					return ""
+				}
+				root = parent
+			}
 		}
 	}
 	return root

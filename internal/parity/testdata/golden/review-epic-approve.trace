@@ -1,0 +1,4 @@
+{root}/repo/ git log --reverse {sha1}..main --format=%H%x00%(trailers:key=Magicite-Task,valueonly)
+{root}/repo/ git show --format= --patch {sha2}
+{root}/repo kiro review epic-1
+{root}/repo/ bd close epic-1 --reason-file {root}/close-reason.md

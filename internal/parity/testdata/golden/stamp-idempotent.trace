@@ -1,0 +1,19 @@
+{root}/repo git -C {root}/ifrit add -A
+{root}/repo git merge-base --is-ancestor ifrit main
+{root}/repo git -C {root}/ifrit commit -m 'task complete (ifrit)'
+{root}/repo git rev-parse --verify ifrit
+{root}/repo git -C {root}/ifrit rebase main ifrit
+{root}/repo git -C {root}/ifrit rev-list --count --merges main..ifrit
+{root}/repo git -C {root}/ifrit rev-list --reverse main..ifrit
+{root}/repo git -C {root}/ifrit rev-parse ifrit
+{root}/repo git -C {root}/ifrit log -1 --format=%B ifrit
+{root}/repo git -C {root}/ifrit -c trailer.ifexists=replaceIfDifferent commit --amend --no-edit --trailer Magicite-Model=model --trailer Magicite-Backend=backend --trailer Magicite-Difficulty=high --trailer Magicite-Effort=high --trailer Magicite-Agent=agent --trailer Magicite-Repo=repo --trailer Magicite-Seat=ifrit --trailer Magicite-Task=task-1 --trailer 'Magicite-Harness=maduin 0.3.0' --trailer Magicite-Harness-Rev=revision
+{root}/repo git merge --ff-only ifrit
+{root}/repo git -C {root}/ifrit add -A
+{root}/repo git merge-base --is-ancestor ifrit main
+{root}/repo git -C {root}/ifrit commit -m 'task complete (ifrit)'
+{root}/repo git rev-parse --verify ifrit
+{root}/repo git -C {root}/ifrit rebase main ifrit
+{root}/repo git -C {root}/ifrit rev-list --count --merges main..ifrit
+{root}/repo git -C {root}/ifrit rev-list --reverse main..ifrit
+{root}/repo git merge --ff-only ifrit

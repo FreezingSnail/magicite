@@ -1,0 +1,6 @@
+{root}/repo git -C {root}/ifrit add -A
+{root}/repo git merge-base --is-ancestor ifrit main
+{root}/repo git -C {root}/ifrit commit --amend --no-edit
+{root}/repo git rev-parse --verify ifrit
+{root}/repo git -C {root}/ifrit rebase main ifrit
+{root}/repo git -C {root}/ifrit rebase --abort
