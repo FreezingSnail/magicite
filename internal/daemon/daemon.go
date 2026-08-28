@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -255,7 +257,7 @@ func (b gateBeadsAdapter) EpicChildren(ctx context.Context, r repo.Repo, id stri
 	if err != nil {
 		return nil, err
 	}
-	return client.Query(ctx, "parent:"+id, true)
+	return client.Query(ctx, bd.EpicChildrenQuery(id), true)
 }
 func (b gateBeadsAdapter) Query(ctx context.Context, r repo.Repo, query string) ([]bd.Bead, error) {
 	client, err := b.beads.client(r)
@@ -317,12 +319,18 @@ type beadsAdapter struct {
 }
 
 func newBeads(records []repo.Repo, log *logging.Logger) (*beadsAdapter, error) {
+	if len(records) != 0 {
+		if _, err := exec.LookPath("bd"); err != nil {
+			return nil, fmt.Errorf("locate bd executable: %w", err)
+		}
+	}
 	clients := make(map[string]*bd.Client, len(records))
 	for _, record := range records {
 		client, err := bd.New("", record.Root)
 		if err != nil {
 			return nil, err
 		}
+		client.Env = os.Environ()
 		client.Log = log
 		clients[record.Root] = client
 	}
@@ -411,19 +419,19 @@ func (b *beadsAdapter) HumanOnly(ctx context.Context, r repo.Repo, id string) (b
 	return false, nil
 }
 func (b *beadsAdapter) InProgress(ctx context.Context, r repo.Repo) ([]string, error) {
-	return b.ids(ctx, r, "status:in_progress")
+	return b.ids(ctx, r, bd.InProgressQuery())
 }
 func (b *beadsAdapter) OpenEpics(ctx context.Context, r repo.Repo) ([]string, error) {
-	return b.ids(ctx, r, "type:epic")
+	return b.ids(ctx, r, bd.OpenEpicsQuery())
 }
 func (b *beadsAdapter) EpicChildren(ctx context.Context, r repo.Repo, id string) ([]string, error) {
-	return b.ids(ctx, r, "parent:"+id)
+	return b.ids(ctx, r, bd.EpicChildrenQuery(id))
 }
 func (b *beadsAdapter) EpicOpenChildren(ctx context.Context, r repo.Repo, id string) ([]string, error) {
-	return b.ids(ctx, r, "parent:"+id+" status:open")
+	return b.ids(ctx, r, bd.EpicOpenChildrenQuery(id))
 }
 func (b *beadsAdapter) DriftFixTasks(ctx context.Context, r repo.Repo) ([]string, error) {
-	return b.ids(ctx, r, "label:drift-fix")
+	return b.ids(ctx, r, bd.DriftFixQuery())
 }
 func (b *beadsAdapter) CancelAll(context.Context) error { return nil }
 func (b *beadsAdapter) Query(ctx context.Context, r repo.Repo, query string) ([]bd.Bead, error) {

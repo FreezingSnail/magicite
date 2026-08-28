@@ -85,7 +85,10 @@ type execRunner struct{}
 func (execRunner) Git(ctx context.Context, dir string, args ...string) (int, string, error) {
 	stdout, stderr, exitCode, runErr := exec.Run(ctx, dir, "git", args...)
 	output := string(stdout) + string(stderr)
-	if runErr != nil && exitCode >= 0 && ctx.Err() == nil {
+	if runErr == nil {
+		return exitCode, output, nil
+	}
+	if exitCode >= 0 && ctx.Err() == nil {
 		return exitCode, output, nil
 	}
 	return exitCode, output, runErr

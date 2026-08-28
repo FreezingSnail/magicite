@@ -3,6 +3,7 @@ package backends
 
 import (
 	"errors"
+	"os"
 
 	"github.com/connorfranc/magicite/internal/agent"
 	"github.com/connorfranc/magicite/internal/agent/kiro"
@@ -21,7 +22,7 @@ func Register(reg *agent.Registry, cfg config.Config) error {
 
 	for _, adapter := range []agent.Adapter{
 		opencode.New(opencode.Options{}),
-		kiro.New(kiro.Options{}),
+		kiro.New(kiro.Options{Env: os.Environ()}),
 	} {
 		if err := reg.Register(adapter); err != nil {
 			return err
