@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	magicexec "github.com/FreezingSnail/magicite/internal/exec"
+	magicexec "github.com/connorfranc/magicite/internal/exec"
 )
 
 func (p *Pipeline) gate(ctx context.Context, c *Context) error {

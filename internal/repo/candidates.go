@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/config"
 )
 
 const maxScanEntries = 512

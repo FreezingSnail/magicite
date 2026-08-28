@@ -8,7 +8,7 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/FreezingSnail/magicite/internal/wire"
+	"github.com/connorfranc/magicite/internal/wire"
 )
 
 // ControlRegistrationError reports an invalid control handler registration.

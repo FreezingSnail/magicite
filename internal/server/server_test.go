@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/logging"
-	"github.com/FreezingSnail/magicite/internal/wire"
+	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/connorfranc/magicite/internal/wire"
 )
 
 func startProtocolServer(t *testing.T, router *Router, bus *Bus) (string, context.CancelFunc, <-chan error) {

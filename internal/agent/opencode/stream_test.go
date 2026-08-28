@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/agent"
+	"github.com/connorfranc/magicite/internal/agent"
 )
 
 func TestParseLine(t *testing.T) {

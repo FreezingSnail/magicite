@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/FreezingSnail/magicite/internal/stamp"
+	"github.com/connorfranc/magicite/internal/stamp"
 )
 
 // Landed reports whether a seat branch is an ancestor of the integration branch.

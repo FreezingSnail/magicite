@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/config"
-	"github.com/FreezingSnail/magicite/internal/logging"
-	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/connorfranc/magicite/internal/repo"
 )
 
 func TestRepoWarnRateLimitsAndRepoOKClearsLatch(t *testing.T) {

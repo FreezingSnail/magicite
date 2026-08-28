@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/worktree"
+	"github.com/connorfranc/magicite/internal/worktree"
 )
 
 type testRepo struct {

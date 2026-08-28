@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/testenv"
+	"github.com/connorfranc/magicite/internal/testenv"
 )
 
 const childArgument = "--magicite-fake-agent-child"

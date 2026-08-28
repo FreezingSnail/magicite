@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/FreezingSnail/magicite/internal/exec"
-	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/connorfranc/magicite/internal/exec"
+	"github.com/connorfranc/magicite/internal/logging"
 )
 
 const defaultWorkspacePath = "harness/workspaces"

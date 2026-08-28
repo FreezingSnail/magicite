@@ -151,7 +151,7 @@ func Default() Config {
 			Seats: []SeatConfig{{Name: "phoenix", Role: "repairer"}}, MaxRetries: 3,
 		},
 		Welfare:    WelfareConfig{HandoffTimeout: 120},
-		Repos:      ReposConfig{Discover: "explicit", Roots: []string{"/Users/FreezingSnail/code/magicite"}},
+		Repos:      ReposConfig{Discover: "explicit", Roots: []string{"/Users/connorfranc/code/magicite"}},
 		Workspaces: WorkspaceConfig{Path: "harness/workspaces"},
 	}
 }

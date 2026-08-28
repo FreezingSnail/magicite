@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/FreezingSnail/magicite/internal/agent"
-	executil "github.com/FreezingSnail/magicite/internal/exec"
+	"github.com/connorfranc/magicite/internal/agent"
+	executil "github.com/connorfranc/magicite/internal/exec"
 )
 
 const (

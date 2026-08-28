@@ -3,7 +3,7 @@ package worktree
 import (
 	"context"
 
-	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/config"
 )
 
 // Provisioner manages per-seat repository worktrees.

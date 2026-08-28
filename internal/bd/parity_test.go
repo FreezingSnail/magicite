@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/bd"
-	"github.com/FreezingSnail/magicite/internal/parity"
-	"github.com/FreezingSnail/magicite/internal/testenv"
+	"github.com/connorfranc/magicite/internal/bd"
+	"github.com/connorfranc/magicite/internal/parity"
+	"github.com/connorfranc/magicite/internal/testenv"
 )
 
 func TestMaduinBDParity(t *testing.T) {

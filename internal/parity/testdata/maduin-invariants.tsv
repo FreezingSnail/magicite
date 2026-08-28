@@ -1,5 +1,5 @@
 # Snapshot of 437 maduin ERT invariants.
-# Regenerate rows: git -C /Users/FreezingSnail/code/maduin show b7f75b2eb270747ec79b8669913d5199b9c48565:harness/maduin-test.el | awk '/^\(ert-deftest maduin-test-/{name=$2; domain=name; sub(/^maduin-test-/, "", domain); sub(/-.*/, "", domain); print name "\t" domain "\t" NR}'
+# Regenerate rows: git -C /Users/connorfranc/code/maduin show b7f75b2eb270747ec79b8669913d5199b9c48565:harness/maduin-test.el | awk '/^\(ert-deftest maduin-test-/{name=$2; domain=name; sub(/^maduin-test-/, "", domain); sub(/-.*/, "", domain); print name "\t" domain "\t" NR}'
 # total: 437
 maduin-test-dispatch-queue-ready-entry	dispatch	72
 maduin-test-dispatch-queue-priority	dispatch	84

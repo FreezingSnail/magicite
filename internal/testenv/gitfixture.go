@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	magicexec "github.com/FreezingSnail/magicite/internal/exec"
+	magicexec "github.com/connorfranc/magicite/internal/exec"
 )
 
 const (

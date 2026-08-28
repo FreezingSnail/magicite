@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/config"
-	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/connorfranc/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/logging"
 )
 
 type lifecycleRunner struct {

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/bd"
+	"github.com/connorfranc/magicite/internal/bd"
 )
 
 func TestReadsUseSeedOrderAndNotFoundError(t *testing.T) {

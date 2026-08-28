@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/FreezingSnail/magicite/internal/logging"
-	stampdata "github.com/FreezingSnail/magicite/internal/stamp"
+	"github.com/connorfranc/magicite/internal/logging"
+	stampdata "github.com/connorfranc/magicite/internal/stamp"
 )
 
 // OnComplete handles one spawned session's terminal runtime outcome.

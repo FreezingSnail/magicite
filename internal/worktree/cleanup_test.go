@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/connorfranc/magicite/internal/logging"
 )
 
 func TestCleanupRemovesSeatWorktreeBranchAndPrunes(t *testing.T) {

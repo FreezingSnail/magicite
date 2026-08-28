@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/FreezingSnail/magicite/internal/config"
-	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/connorfranc/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/logging"
 )
 
 // Options configures repository discovery and registry events.

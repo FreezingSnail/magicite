@@ -1,4 +1,4 @@
-module github.com/FreezingSnail/magicite
+module github.com/connorfranc/magicite
 
 go 1.26
 

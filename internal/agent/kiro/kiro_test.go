@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/agent"
-	"github.com/FreezingSnail/magicite/internal/agent/conformance"
+	"github.com/connorfranc/magicite/internal/agent"
+	"github.com/connorfranc/magicite/internal/agent/conformance"
 )
 
 func TestRunRefusesInvalidInputs(t *testing.T) {

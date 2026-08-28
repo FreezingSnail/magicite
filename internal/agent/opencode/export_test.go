@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/agent"
+	"github.com/connorfranc/magicite/internal/agent"
 )
 
 func TestParseExport(t *testing.T) {

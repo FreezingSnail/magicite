@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/parity"
+	"github.com/connorfranc/magicite/internal/parity"
 )
 
 func TestMaduinReviewParity(t *testing.T) {

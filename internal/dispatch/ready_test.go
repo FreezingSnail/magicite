@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/repo"
 )
 
 func readyRepo(t *testing.T, root, name string) repo.Repo {

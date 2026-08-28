@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/config"
-	"github.com/FreezingSnail/magicite/internal/logging"
-	"github.com/FreezingSnail/magicite/internal/parity"
-	"github.com/FreezingSnail/magicite/internal/testenv"
+	"github.com/connorfranc/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/connorfranc/magicite/internal/parity"
+	"github.com/connorfranc/magicite/internal/testenv"
 )
 
 func TestMaduinRepoParity(t *testing.T) {

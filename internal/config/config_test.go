@@ -15,7 +15,7 @@ func TestLoadDefaultsForMissingFile(t *testing.T) {
 	if got.Harness != want.Harness || !reflect.DeepEqual(got.Fleet, want.Fleet) || got.Welfare != want.Welfare || got.Workspaces != want.Workspaces {
 		t.Fatalf("Load() = %#v, want default %#v", got, want)
 	}
-	if len(got.Repos.Roots) != 1 || got.Repos.Roots[0] != "/Users/FreezingSnail/code/magicite" {
+	if len(got.Repos.Roots) != 1 || got.Repos.Roots[0] != "/Users/connorfranc/code/magicite" {
 		t.Fatalf("Load() repos = %#v, want shipped defaults", got.Repos)
 	}
 }

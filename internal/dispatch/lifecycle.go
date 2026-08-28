@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/connorfranc/magicite/internal/logging"
 )
 
 const defaultPollInterval = 30 * time.Second

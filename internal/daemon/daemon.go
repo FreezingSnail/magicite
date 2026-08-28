@@ -8,19 +8,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/agent"
-	"github.com/FreezingSnail/magicite/internal/agent/backends"
-	"github.com/FreezingSnail/magicite/internal/bd"
-	"github.com/FreezingSnail/magicite/internal/config"
-	"github.com/FreezingSnail/magicite/internal/dispatch"
-	"github.com/FreezingSnail/magicite/internal/land"
-	"github.com/FreezingSnail/magicite/internal/logging"
-	"github.com/FreezingSnail/magicite/internal/repo"
-	"github.com/FreezingSnail/magicite/internal/server"
-	"github.com/FreezingSnail/magicite/internal/stamp"
-	"github.com/FreezingSnail/magicite/internal/state"
-	"github.com/FreezingSnail/magicite/internal/version"
-	"github.com/FreezingSnail/magicite/internal/worktree"
+	"github.com/connorfranc/magicite/internal/agent"
+	"github.com/connorfranc/magicite/internal/agent/backends"
+	"github.com/connorfranc/magicite/internal/bd"
+	"github.com/connorfranc/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/dispatch"
+	"github.com/connorfranc/magicite/internal/gate"
+	"github.com/connorfranc/magicite/internal/land"
+	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/server"
+	"github.com/connorfranc/magicite/internal/stamp"
+	"github.com/connorfranc/magicite/internal/state"
+	"github.com/connorfranc/magicite/internal/version"
+	"github.com/connorfranc/magicite/internal/worktree"
 )
 
 // Assembly contains an assembled daemon before it begins serving.
@@ -28,6 +29,7 @@ type Assembly struct {
 	Core   server.Core
 	Router *server.Router
 	Bus    *server.Bus
+	State  *state.Store
 	Socket string
 }
 
@@ -49,11 +51,12 @@ func Assemble(ctx context.Context, cfgPath string) (*Assembly, error) {
 	if err != nil {
 		return nil, fmt.Errorf("daemon: build bd client: %w", err)
 	}
-	workspaces, err := worktree.New(worktree.Options{WorkspacePath: cfg.Workspaces.Path, Runner: worktree.ExecRunner(), Log: log.Event})
+	gitRunner := worktree.ExecRunner()
+	workspaces, err := worktree.New(worktree.Options{WorkspacePath: cfg.Workspaces.Path, Runner: gitRunner, Log: log.Event})
 	if err != nil {
 		return nil, fmt.Errorf("daemon: build workspaces: %w", err)
 	}
-	lander, err := land.New(land.Options{Workspace: landWorkspace{manager: workspaces}, Runner: worktree.ExecRunner(), Log: func(level, message string) {
+	lander, err := land.New(land.Options{Workspace: landWorkspace{manager: workspaces}, Runner: gitRunner, Log: func(level, message string) {
 		log.Event(logging.Info, "land", map[string]any{"level": level, "message": message})
 	}})
 	if err != nil {
@@ -63,12 +66,22 @@ func Assemble(ctx context.Context, cfgPath string) (*Assembly, error) {
 	if err != nil {
 		return nil, fmt.Errorf("daemon: build agent runtime: %w", err)
 	}
-	_ = state.Default()
-	dispatcher, err := dispatch.New(dispatch.Deps{Beads: beads, Workspaces: dispatchWorkspace{manager: workspaces}, Lander: landAdapter{pipeline: lander}, Runner: runnerAdapter{runtime: runtime}, Repos: repos, Gate: dispatch.PermissiveGate{}, Clock: wallClock{}, Config: cfg, Logger: func(level logging.Level, kind string, fields map[string]any) { log.Event(level, kind, fields) }})
+	store := state.Default()
+	qualityGate, err := gate.New(gate.Deps{
+		Beads:  gateBeadsAdapter{beads: beads},
+		Git:    gateGit{runner: gitRunner},
+		Repos:  newGateRepos(records),
+		Config: gate.Config{Enabled: cfg.Reviewer.Enabled, Model: cfg.Reviewer.Model, Agent: cfg.Reviewer.Agent, MaxRetries: cfg.Reviewer.MaxRetries},
+		Log:    *log,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("daemon: build gate: %w", err)
+	}
+	dispatcher, err := dispatch.New(dispatch.Deps{Beads: beads, Workspaces: dispatchWorkspace{manager: workspaces}, Lander: landAdapter{pipeline: lander}, Runner: runnerAdapter{runtime: runtime}, Repos: repos, Gate: qualityGate, Clock: wallClock{}, Config: cfg, Logger: func(level logging.Level, kind string, fields map[string]any) { log.Event(level, kind, fields) }})
 	if err != nil {
 		return nil, fmt.Errorf("daemon: build dispatcher: %w", err)
 	}
-	core, err := NewCore(Deps{Config: cfg, Log: *log, Dispatcher: dispatcher, Beads: beads, Repos: repos, Gate: dispatch.PermissiveGate{}, Bus: bus, Version: version.Info()})
+	core, err := NewCore(Deps{Config: cfg, Log: *log, Dispatcher: dispatcher, Beads: beads, Repos: repos, Gate: qualityGate, Bus: bus, Version: version.Info()})
 	if err != nil {
 		return nil, fmt.Errorf("daemon: build core: %w", err)
 	}
@@ -79,7 +92,7 @@ func Assemble(ctx context.Context, cfgPath string) (*Assembly, error) {
 	if err := server.RegisterControl(router, core); err != nil {
 		return nil, fmt.Errorf("daemon: register control commands: %w", err)
 	}
-	return &Assembly{Core: core, Router: router, Bus: bus, Socket: server.SocketPath(cfg)}, nil
+	return &Assembly{Core: core, Router: router, Bus: bus, State: store, Socket: server.SocketPath(cfg)}, nil
 }
 
 // Run assembles and serves the daemon until ctx is cancelled.
@@ -199,6 +212,83 @@ func (r runnerAdapter) OnComplete(callback func(string, dispatch.Outcome)) {
 	})
 }
 func (runnerAdapter) OnPhase(func(string, string)) {}
+
+type gateGit struct{ runner worktree.Runner }
+
+func (g gateGit) Output(ctx context.Context, r repo.Repo, args ...string) (int, string, error) {
+	return g.runner.Git(ctx, r.Root, args...)
+}
+
+type gateRepos map[string]repo.Repo
+
+func newGateRepos(records []repo.Repo) gateRepos {
+	result := make(gateRepos, len(records))
+	for _, record := range records {
+		result[record.Name] = record
+	}
+	return result
+}
+
+func (r gateRepos) Get(name string) (repo.Repo, bool) {
+	record, ok := r[name]
+	return record, ok
+}
+
+type gateBeadsAdapter struct{ beads *beadsAdapter }
+
+func (b gateBeadsAdapter) Show(ctx context.Context, r repo.Repo, id string) (bd.Bead, error) {
+	client, err := b.beads.client(r)
+	if err != nil {
+		return bd.Bead{}, err
+	}
+	return client.Show(ctx, id)
+}
+func (b gateBeadsAdapter) Labels(ctx context.Context, r repo.Repo, id string) ([]string, error) {
+	client, err := b.beads.client(r)
+	if err != nil {
+		return nil, err
+	}
+	return client.Labels(ctx, id)
+}
+func (b gateBeadsAdapter) EpicChildren(ctx context.Context, r repo.Repo, id string) ([]bd.Bead, error) {
+	client, err := b.beads.client(r)
+	if err != nil {
+		return nil, err
+	}
+	return client.Query(ctx, "parent:"+id, true)
+}
+func (b gateBeadsAdapter) Query(ctx context.Context, r repo.Repo, query string) ([]bd.Bead, error) {
+	client, err := b.beads.client(r)
+	if err != nil {
+		return nil, err
+	}
+	return client.Query(ctx, query, true)
+}
+func (b gateBeadsAdapter) Create(ctx context.Context, r repo.Repo, request bd.CreateRequest) (string, error) {
+	client, err := b.beads.client(r)
+	if err != nil {
+		return "", err
+	}
+	return client.Create(ctx, request)
+}
+func (b gateBeadsAdapter) Comment(ctx context.Context, r repo.Repo, id, text string) error {
+	client, err := b.beads.client(r)
+	if err != nil {
+		return err
+	}
+	return client.Comment(ctx, id, text)
+}
+func (b gateBeadsAdapter) Close(ctx context.Context, r repo.Repo, id, reason string) error {
+	client, err := b.beads.client(r)
+	if err != nil {
+		return err
+	}
+	return client.Close(ctx, id, reason)
+}
+
+var _ gate.Git = gateGit{}
+var _ gate.Repos = gateRepos{}
+var _ gate.Beads = gateBeadsAdapter{}
 
 type landAdapter struct{ pipeline *land.Pipeline }
 

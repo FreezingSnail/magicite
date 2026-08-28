@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/bd"
+	"github.com/connorfranc/magicite/internal/bd"
 )
 
 type prefixRunner struct {

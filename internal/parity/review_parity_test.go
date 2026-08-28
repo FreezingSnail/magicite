@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/bd"
-	"github.com/FreezingSnail/magicite/internal/gate"
-	"github.com/FreezingSnail/magicite/internal/repo"
-	"github.com/FreezingSnail/magicite/internal/testenv"
+	"github.com/connorfranc/magicite/internal/bd"
+	"github.com/connorfranc/magicite/internal/gate"
+	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/testenv"
 )
 
 func TestReviewEpicParity(t *testing.T) {

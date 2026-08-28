@@ -6,8 +6,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/FreezingSnail/magicite/internal/client"
-	"github.com/FreezingSnail/magicite/internal/wire"
+	"github.com/connorfranc/magicite/internal/client"
+	"github.com/connorfranc/magicite/internal/wire"
 )
 
 // EmitJSON writes data in the stable magicite output envelope.

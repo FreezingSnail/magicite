@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/config"
-	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/repo"
 )
 
 func newRegistryDispatcher(t *testing.T) (*Dispatcher, *manualClock) {

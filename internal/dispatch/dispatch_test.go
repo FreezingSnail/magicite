@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/repo"
 )
 
 func completeDeps() Deps {

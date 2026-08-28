@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/agent"
-	"github.com/FreezingSnail/magicite/internal/agent/kiro"
-	"github.com/FreezingSnail/magicite/internal/bd"
-	"github.com/FreezingSnail/magicite/internal/config"
-	"github.com/FreezingSnail/magicite/internal/dispatch"
-	"github.com/FreezingSnail/magicite/internal/repo"
-	"github.com/FreezingSnail/magicite/internal/testenv"
+	"github.com/connorfranc/magicite/internal/agent"
+	"github.com/connorfranc/magicite/internal/agent/kiro"
+	"github.com/connorfranc/magicite/internal/bd"
+	"github.com/connorfranc/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/dispatch"
+	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/testenv"
 )
 
 func TestDispatchParity(t *testing.T) {

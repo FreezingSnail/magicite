@@ -5,7 +5,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/cli"
+	"github.com/connorfranc/magicite/internal/cli"
 )
 
 func TestMainUsesCLI(t *testing.T) {

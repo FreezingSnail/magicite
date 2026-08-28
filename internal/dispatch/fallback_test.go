@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/config"
-	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/repo"
 )
 
 func TestFallbackRetryCarriesRoutingAndMarksAttempt(t *testing.T) {

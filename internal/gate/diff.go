@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/FreezingSnail/magicite/internal/logging"
-	"github.com/FreezingSnail/magicite/internal/repo"
-	"github.com/FreezingSnail/magicite/internal/stamp"
+	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/stamp"
 )
 
 const epicLogFormat = "--format=%H%x00%(trailers:key=" + stamp.KeyTask + ",valueonly)"

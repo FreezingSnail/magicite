@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/testenv"
+	"github.com/connorfranc/magicite/internal/testenv"
 )
 
 func TestScenariosEmitCompleteNDJSONWithExpectedExit(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/wire"
+	"github.com/connorfranc/magicite/internal/wire"
 )
 
 const defaultTimeout = 10 * time.Second

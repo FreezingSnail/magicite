@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/bd"
-	"github.com/FreezingSnail/magicite/internal/dispatch"
-	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/bd"
+	"github.com/connorfranc/magicite/internal/dispatch"
+	"github.com/connorfranc/magicite/internal/repo"
 )
 
 func TestBuildPlanRendersVerdictsAndGoal(t *testing.T) {

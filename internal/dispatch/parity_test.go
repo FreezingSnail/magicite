@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/parity"
-	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/parity"
+	"github.com/connorfranc/magicite/internal/repo"
 )
 
 func TestMaduinDispatchParity(t *testing.T) {

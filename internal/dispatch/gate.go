@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/FreezingSnail/magicite/internal/decomp"
-	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/decomp"
+	"github.com/connorfranc/magicite/internal/repo"
 )
 
 // ErrReviewUnsupported reports review work requested without a configured gate.

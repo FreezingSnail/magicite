@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/FreezingSnail/magicite/internal/wire"
+	"github.com/connorfranc/magicite/internal/wire"
 )
 
 // ReadRegistrationError reports an invalid read handler registration.

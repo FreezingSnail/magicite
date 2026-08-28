@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/wire"
+	"github.com/connorfranc/magicite/internal/wire"
 )
 
 var testSocketSequence atomic.Uint64

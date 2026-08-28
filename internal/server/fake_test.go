@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/FreezingSnail/magicite/internal/wire"
+	"github.com/connorfranc/magicite/internal/wire"
 )
 
 type coreCall struct {

@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/repo"
 )
 
 // Fake is a synchronized in-memory repository lookup.

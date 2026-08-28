@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/FreezingSnail/magicite/internal/daemon"
+	"github.com/connorfranc/magicite/internal/daemon"
 )
 
 // RegisterServe adds the daemon serve command to the CLI.

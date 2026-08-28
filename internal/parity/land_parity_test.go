@@ -8,12 +8,12 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/bd"
-	magicexec "github.com/FreezingSnail/magicite/internal/exec"
-	"github.com/FreezingSnail/magicite/internal/land"
-	"github.com/FreezingSnail/magicite/internal/repo"
-	"github.com/FreezingSnail/magicite/internal/stamp"
-	"github.com/FreezingSnail/magicite/internal/testenv"
+	"github.com/connorfranc/magicite/internal/bd"
+	magicexec "github.com/connorfranc/magicite/internal/exec"
+	"github.com/connorfranc/magicite/internal/land"
+	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/stamp"
+	"github.com/connorfranc/magicite/internal/testenv"
 )
 
 func TestLandParity(t *testing.T) {

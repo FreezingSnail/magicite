@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/config"
 )
 
 func TestFinderCandidatesExplicitFiltersAndDeduplicates(t *testing.T) {

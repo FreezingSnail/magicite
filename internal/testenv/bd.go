@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/bd"
+	"github.com/connorfranc/magicite/internal/bd"
 )
 
 // Dependency is a bd dependency record stored by the fake.

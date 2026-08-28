@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/bd"
-	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/bd"
+	"github.com/connorfranc/magicite/internal/repo"
 )
 
 func testRepo(t *testing.T, name string) repo.Repo {

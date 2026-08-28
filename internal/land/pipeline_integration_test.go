@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/stamp"
+	"github.com/connorfranc/magicite/internal/stamp"
 )
 
 func TestLandBranchCleanLandIsIdempotent(t *testing.T) {

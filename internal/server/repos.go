@@ -1,6 +1,6 @@
 package server
 
-import "github.com/FreezingSnail/magicite/internal/repo"
+import "github.com/connorfranc/magicite/internal/repo"
 
 // RepoView is the repository record exposed through the daemon socket API.
 type RepoView struct {

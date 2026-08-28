@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/wire"
+	"github.com/connorfranc/magicite/internal/wire"
 )
 
 func TestProjectLiftsEventFields(t *testing.T) {

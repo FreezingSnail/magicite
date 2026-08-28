@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/config"
-	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/connorfranc/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/logging"
 )
 
 func TestForBeadInRoutesByLongestPrefix(t *testing.T) {

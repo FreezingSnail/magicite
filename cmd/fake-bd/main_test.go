@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/FreezingSnail/magicite/internal/testenv"
+	"github.com/connorfranc/magicite/internal/testenv"
 )
 
 func TestFakeBDRejectsUnknownSubcommand(t *testing.T) {

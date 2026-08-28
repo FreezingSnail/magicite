@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/decomp"
-	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/connorfranc/magicite/internal/decomp"
+	"github.com/connorfranc/magicite/internal/repo"
 )
 
 type fakeCall struct {

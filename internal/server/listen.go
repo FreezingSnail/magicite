@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/config"
 )
 
 const probeTimeout = 100 * time.Millisecond

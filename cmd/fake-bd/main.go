@@ -11,7 +11,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/FreezingSnail/magicite/internal/testenv"
+	"github.com/connorfranc/magicite/internal/testenv"
 )
 
 type dependency struct {

@@ -4,10 +4,10 @@ package backends
 import (
 	"errors"
 
-	"github.com/FreezingSnail/magicite/internal/agent"
-	"github.com/FreezingSnail/magicite/internal/agent/kiro"
-	"github.com/FreezingSnail/magicite/internal/agent/opencode"
-	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/connorfranc/magicite/internal/agent"
+	"github.com/connorfranc/magicite/internal/agent/kiro"
+	"github.com/connorfranc/magicite/internal/agent/opencode"
+	"github.com/connorfranc/magicite/internal/config"
 )
 
 var errNilRegistry = errors.New("nil agent registry")
