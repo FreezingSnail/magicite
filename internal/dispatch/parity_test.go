@@ -1,12 +1,14 @@
 package dispatch
 
 import (
+	"context"
 	"reflect"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/FreezingSnail/magicite/internal/parity"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 func TestMaduinDispatchParity(t *testing.T) {
@@ -32,6 +34,8 @@ func TestMaduinDispatchParity(t *testing.T) {
 				if got := d.Sessions()[0].Backend; got != "kiro" {
 					t.Fatalf("session backend = %q", got)
 				}
+			case "maduin-test-dispatch-syncs-seat-before-claim":
+				assertSeatSyncBeforeClaim(t)
 			}
 		})
 	}
@@ -63,5 +67,26 @@ func assertQueueReplay(t *testing.T) {
 	}
 	if again := MergeReady([]RepoReady{{Repo: alpha, Entries: []ReadyEntry{{Task: "a1", Priority: "1"}, {Task: "a2", Priority: "1"}, {Task: "a3", Priority: "2"}}}, {Repo: beta, Entries: []ReadyEntry{{Task: "b1", Priority: "1"}, {Task: "b2", Priority: "2"}}}}); !reflect.DeepEqual(again, got) {
 		t.Fatal("queue output is not deterministic")
+	}
+}
+
+func assertSeatSyncBeforeClaim(t *testing.T) {
+	t.Helper()
+	order := []string{}
+	beads := &fakeBeads{
+		claim: func(context.Context, repo.Repo, string) error {
+			order = append(order, "claim")
+			return nil
+		},
+	}
+	workspaces := readyWorkspaces()
+	workspaces.sync = func(context.Context, repo.Repo, string) (SyncResult, error) {
+		order = append(order, "sync")
+		return SyncOK, nil
+	}
+	dispatcher, _ := spawnDispatcher(t, beads, workspaces, &fakeRunner{}, &fakeGate{})
+	_ = dispatcher.Implement(context.Background(), spawnRepo(t), "task-1")
+	if !reflect.DeepEqual(order, []string{"sync", "claim"}) {
+		t.Fatalf("seat/claim order = %q, want [sync claim]", order)
 	}
 }
