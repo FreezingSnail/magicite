@@ -227,6 +227,9 @@ var parityMutationSamples = []parityMutationSample{
 	{"logging level filter", "maduin-test-log-respects-level", "TestMaduinLoggingParity/maduin-test-log-respects-level"},
 	{"main daemon lifecycle", "maduin-test-main-stop-tears-down", "TestMaduinOrchestrationParity/maduin-test-main-stop-tears-down"},
 	{"designer repo dispatch", "maduin-test-designer-design-and-epic-dispatch-repo", "TestMaduinOrchestrationParity/maduin-test-designer-design-and-epic-dispatch-repo"},
+	{"dispatch queue", "maduin-test-dispatch-queue-round-robin", "TestMaduinDispatchParity/maduin-test-dispatch-queue-round-robin"},
+	{"dispatch spawn", "maduin-test-dispatch-spawn-high-uses-terra", "TestMaduinDispatchParity/maduin-test-dispatch-spawn-high-uses-terra"},
+	{"dispatch outcome", "maduin-test-dispatch-completion-requires-task-provenance", "TestMaduinDispatchParity/maduin-test-dispatch-completion-requires-task-provenance"},
 }
 
 func TestParityMutationSamplesRemainBound(t *testing.T) {
