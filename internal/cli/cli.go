@@ -3,7 +3,6 @@ package cli
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/FreezingSnail/magicite/internal/client"
 	"github.com/FreezingSnail/magicite/internal/config"
-	"github.com/FreezingSnail/magicite/internal/logging"
 	"github.com/FreezingSnail/magicite/internal/server"
 	"github.com/FreezingSnail/magicite/internal/version"
 )
@@ -106,35 +104,6 @@ func defaultSocket() string {
 		return socket
 	}
 	return server.SocketPath(config.Config{})
-}
-
-func init() {
-	Register(Command{Name: "serve", Usage: "serve [--socket path] [--config path]", Summary: "run the daemon", Run: serve})
-}
-
-func serve(ctx context.Context, e *Env, args []string) int {
-	flags := flag.NewFlagSet("serve", flag.ContinueOnError)
-	flags.SetOutput(io.Discard)
-	socket := flags.String("socket", defaultSocket(), "Unix socket path")
-	configPath := flags.String("config", defaultConfig(), "configuration path")
-	if flags.Parse(args) != nil || flags.NArg() != 0 {
-		return commandUsage(e, "serve")
-	}
-	if _, err := config.Load(*configPath); err != nil {
-		_, _ = fmt.Fprintf(e.Err, "load config: %v\n", err)
-		return 1
-	}
-	router := server.NewRouter(logging.Logger{})
-	_ = router.Register("status", func(context.Context, json.RawMessage) (any, error) {
-		return struct {
-			State string `json:"status"`
-		}{State: "running"}, nil
-	})
-	if err := server.Serve(ctx, server.Deps{Router: router, Bus: server.NewBus(1024), Socket: *socket}); err != nil {
-		_, _ = fmt.Fprintf(e.Err, "serve: %v\n", err)
-		return 1
-	}
-	return 0
 }
 
 func defaultConfig() string {
