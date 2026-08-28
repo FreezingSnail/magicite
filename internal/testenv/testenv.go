@@ -17,9 +17,13 @@ type Env struct {
 	BinDir    string
 	TracePath string
 
-	t           *testing.T
-	installed   map[string]string
-	fakeBDStore string
+	t                 *testing.T
+	installed         map[string]string
+	fakeBDStore       string
+	fakeAgentStore    string
+	fakeAgentEvents   string
+	fakeAgentPIDs     string
+	fakeAgentScenario string
 }
 
 // New creates an isolated environment rooted in the test's temporary directory.
@@ -64,6 +68,14 @@ func (e *Env) Env() []string {
 	}
 	if e.fakeBDStore != "" {
 		env = append(env, "MAGICITE_FAKE_BD_STORE="+e.fakeBDStore)
+	}
+	if e.fakeAgentStore != "" {
+		env = append(env,
+			"MAGICITE_FAKE_AGENT_STORE="+e.fakeAgentStore,
+			"MAGICITE_FAKE_AGENT_EVENTS="+e.fakeAgentEvents,
+			"MAGICITE_FAKE_AGENT_PIDS="+e.fakeAgentPIDs,
+			"MAGICITE_FAKE_AGENT_SCENARIO="+e.fakeAgentScenario,
+		)
 	}
 	return env
 }
