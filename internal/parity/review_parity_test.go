@@ -16,7 +16,7 @@ import (
 func TestReviewEpicParity(t *testing.T) {
 	for _, test := range []struct {
 		name, verdict string
-		closed       bool
+		closed        bool
 	}{
 		{name: "approve", verdict: "REVIEW: APPROVED", closed: true},
 		{name: "drift", verdict: "REVIEW: DRIFT: repair child output", closed: false},

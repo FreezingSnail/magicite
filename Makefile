@@ -14,14 +14,25 @@ PARITY_PACKAGES := \
 	./internal/worktree
 
 UPDATE_FLAG := $(if $(filter 1,$(UPDATE)),-update)
+GO_FILES := $(shell git ls-files -- '*.go')
 
-.PHONY: check parity
+.PHONY: check fmt fmt-check parity
 
-check: parity
+check: fmt-check parity
 	go build ./...
 	go vet ./...
 	# Fold coverage into the race suite so check catches instrumentation failures without a second full test run.
 	go test -race -cover ./...
+
+fmt:
+	gofmt -w $(GO_FILES)
+
+fmt-check:
+	@unformatted="$$(gofmt -l $(GO_FILES))"; \
+	if [ -n "$$unformatted" ]; then \
+		printf '%s\n%s\n' 'Run "make fmt" to format:' "$$unformatted" >&2; \
+		exit 1; \
+	fi
 
 parity:
 	go test -race $(PARITY_PACKAGES) $(UPDATE_FLAG)

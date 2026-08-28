@@ -11,7 +11,7 @@ func TestRecordsNormalizesDeduplicatesAndSortsByName(t *testing.T) {
 	zeta := filepath.Join(parent, "zeta")
 	alpha := filepath.Join(parent, "alpha")
 
-	got := Records([]string{zeta, "", zeta+string(filepath.Separator), alpha})
+	got := Records([]string{zeta, "", zeta + string(filepath.Separator), alpha})
 	want := []Repo{
 		mustRecord(t, alpha, "alpha"),
 		mustRecord(t, zeta, "zeta"),

@@ -17,7 +17,7 @@ func TestGateConformsEndToEnd(t *testing.T) {
 	beads := &fakeBeads{
 		beads: map[string]bd.Bead{"epic": {ID: "epic", Design: "goal"}},
 		children: map[string][]bd.Bead{
-			"epic": {{ID: "child", Status: "closed"}},
+			"epic":  {{ID: "child", Status: "closed"}},
 			"other": {{ID: "other-child", Status: "closed"}},
 		},
 		queries: map[string][]bd.Bead{},
