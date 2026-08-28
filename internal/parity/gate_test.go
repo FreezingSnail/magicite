@@ -230,6 +230,8 @@ var parityMutationSamples = []parityMutationSample{
 	{"dispatch queue", "maduin-test-dispatch-queue-round-robin", "TestMaduinDispatchParity/maduin-test-dispatch-queue-round-robin"},
 	{"dispatch spawn", "maduin-test-dispatch-spawn-high-uses-terra", "TestMaduinDispatchParity/maduin-test-dispatch-spawn-high-uses-terra"},
 	{"dispatch outcome", "maduin-test-dispatch-completion-requires-task-provenance", "TestMaduinDispatchParity/maduin-test-dispatch-completion-requires-task-provenance"},
+	{"agent session", "maduin-test-session-completion-hook-runs-once", "TestMaduinAgentParity/maduin-test-session-completion-hook-runs-once"},
+	{"Kiro argv", "maduin-test-kiro-run-uses-required-argv-and-workdir", "TestMaduinAgentParity/maduin-test-kiro-run-uses-required-argv-and-workdir"},
 	{"land task stamp", "maduin-test-pipeline-task-landed-requires-exact-trailer", "TestMaduinPipelineParity/maduin-test-pipeline-task-landed-requires-exact-trailer"},
 	{"stamp round trip", "maduin-test-stamp-parse-roundtrip", "TestMaduinStampParity/maduin-test-stamp-parse-roundtrip"},
 	{"review disabled close", "maduin-test-review-disabled-gate-still-closes-completed-epic", "TestMaduinReviewParity/maduin-test-review-disabled-gate-still-closes-completed-epic"},
