@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -32,33 +33,33 @@ func TestSessionHelperProcess(t *testing.T) {
 		fmt.Fprintln(os.Stdout, "ready")
 		fmt.Fprintln(os.Stderr, "warning")
 		time.Sleep(5 * time.Second)
-		os.Exit(0)
+		syscall.Exit(0)
 	case "exit":
 		fmt.Fprint(os.Stdout, os.Args[separator+2])
-		os.Exit(7)
+		syscall.Exit(7)
 	case "pwd":
 		wd, err := os.Getwd()
 		if err != nil {
-			os.Exit(2)
+			syscall.Exit(2)
 		}
 		fmt.Fprint(os.Stdout, wd)
-		os.Exit(0)
+		syscall.Exit(0)
 	case "environment":
 		fmt.Fprint(os.Stdout, os.Getenv("MAGICITE_SESSION_TEST_ENV"))
-		os.Exit(0)
+		syscall.Exit(0)
 	case "parent":
 		child := osexec.Command(os.Args[0], "-test.run=^TestSessionHelperProcess$", "--", "grandchild")
 		child.Stdout = os.Stdout
 		child.Stderr = os.Stderr
 		if err := child.Start(); err != nil {
-			os.Exit(2)
+			syscall.Exit(2)
 		}
 		fmt.Fprintln(os.Stdout, child.Process.Pid)
 		time.Sleep(5 * time.Second)
-		os.Exit(0)
+		syscall.Exit(0)
 	case "grandchild":
 		time.Sleep(5 * time.Second)
-		os.Exit(0)
+		syscall.Exit(0)
 	}
 }
 

@@ -33,12 +33,14 @@ func TestTreeHelperProcess(t *testing.T) {
 		child.Stdout = os.Stdout
 		child.Stderr = os.Stderr
 		if err := child.Start(); err != nil {
-			os.Exit(2)
+			syscall.Exit(2)
 		}
 		fmt.Fprintln(os.Stdout, child.Process.Pid)
 		time.Sleep(5 * time.Second)
+		syscall.Exit(0)
 	case "grandchild":
 		time.Sleep(5 * time.Second)
+		syscall.Exit(0)
 	case "ignore-term":
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, syscall.SIGTERM)
@@ -47,10 +49,11 @@ func TestTreeHelperProcess(t *testing.T) {
 		<-signals
 		fmt.Fprintln(os.Stderr, "graceful")
 		time.Sleep(5 * time.Second)
+		syscall.Exit(0)
 	case "exit":
-		return
+		syscall.Exit(0)
 	default:
-		return
+		syscall.Exit(0)
 	}
 }
 

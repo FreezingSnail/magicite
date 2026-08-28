@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -27,20 +28,20 @@ func TestRunHelperProcess(t *testing.T) {
 		argument := os.Args[separator+2]
 		fmt.Fprintf(os.Stdout, "out:%s", argument)
 		fmt.Fprintf(os.Stderr, "err:%s", argument)
-		os.Exit(7)
+		syscall.Exit(7)
 	case "pwd":
 		wd, err := os.Getwd()
 		if err != nil {
-			os.Exit(2)
+			syscall.Exit(2)
 		}
 		fmt.Fprint(os.Stdout, wd)
-		os.Exit(0)
+		syscall.Exit(0)
 	case "environment":
 		fmt.Fprint(os.Stdout, os.Getenv("MAGICITE_EXEC_TEST_ENV"))
-		os.Exit(0)
+		syscall.Exit(0)
 	case "wait":
 		time.Sleep(5 * time.Second)
-		os.Exit(0)
+		syscall.Exit(0)
 	}
 }
 

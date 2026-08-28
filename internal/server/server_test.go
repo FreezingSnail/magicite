@@ -103,26 +103,41 @@ func TestServeSubscribeStreamsAndConflicts(t *testing.T) {
 	}
 	defer conn.Close()
 	encoder, decoder := wire.NewEncoder(conn), wire.NewDecoder(conn)
-	if err := encoder.Encode(wire.Request{Schema: wire.Schema, ID: "subscribe", Command: "subscribe", Params: json.RawMessage(`{"since":1}`)}); err != nil {
+	readEvent := func(want wire.Kind) {
+		// Log-projected events can precede this event; read through a deadline rather than assuming exclusive publication.
+		deadline := time.Now().Add(time.Second)
+		for {
+			if err := conn.SetReadDeadline(deadline); err != nil {
+				t.Fatal(err)
+			}
+			frame, err := decoder.Frame()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if frame.Event != nil && frame.Event.Kind == want {
+				if err := conn.SetReadDeadline(time.Time{}); err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+		}
+	}
+
+	// Publish before subscribing and replay from zero: since 1 excludes sequence 1 and can skip the first retained event.
+	bus.Publish(wire.Event{Kind: wire.KindPickup, Level: "info"})
+	if err := encoder.Encode(wire.Request{Schema: wire.Schema, ID: "subscribe", Command: "subscribe", Params: json.RawMessage(`{"since":0}`)}); err != nil {
 		t.Fatal(err)
 	}
-	bus.Publish(wire.Event{Kind: wire.KindPickup, Level: "info"})
-	frame, err := decoder.Frame()
-	if err != nil || frame.Event == nil || frame.Event.Kind != wire.KindPickup {
-		t.Fatalf("event = %#v, %v", frame, err)
-	}
+	readEvent(wire.KindPickup)
 	if err := encoder.Encode(wire.Request{Schema: wire.Schema, ID: "next", Command: "status"}); err != nil {
 		t.Fatal(err)
 	}
-	frame, err = decoder.Frame()
+	frame, err := decoder.Frame()
 	if err != nil || frame.Response == nil || frame.Response.Err == nil || frame.Response.Err.Code != wire.CodeConflict {
 		t.Fatalf("conflict = %#v, %v", frame, err)
 	}
 	bus.Publish(wire.Event{Kind: wire.KindComplete, Level: "info"})
-	frame, err = decoder.Frame()
-	if err != nil || frame.Event == nil || frame.Event.Kind != wire.KindComplete {
-		t.Fatalf("continued event = %#v, %v", frame, err)
-	}
+	readEvent(wire.KindComplete)
 }
 
 func TestServeBadRequestStaysOpenAndSchemaCloses(t *testing.T) {
