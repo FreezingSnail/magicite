@@ -26,13 +26,20 @@ func (e *Error) Unwrap() error {
 // Run executes name with args in dir. It captures standard output and standard
 // error separately. The child receives an explicitly empty environment.
 func Run(ctx context.Context, dir, name string, args ...string) (stdout, stderr []byte, exitCode int, runErr *Error) {
+	return RunEnv(ctx, dir, nil, name, args...)
+}
+
+// RunEnv executes name with args in dir and env. It captures standard output
+// and standard error separately. env is complete and never inherits the caller.
+func RunEnv(ctx context.Context, dir string, env []string, name string, args ...string) (stdout, stderr []byte, exitCode int, runErr *Error) {
 	if err := ctx.Err(); err != nil {
 		return nil, nil, -1, &Error{err: err}
 	}
 
 	cmd := osexec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
-	cmd.Env = []string{}
+	cmd.Env = make([]string, len(env))
+	copy(cmd.Env, env)
 
 	var out, errOut bytes.Buffer
 	cmd.Stdout = &out
