@@ -14,6 +14,9 @@ import (
 
 var updateGoldens bool
 
+// GoldenTraceProvenance states what checked-in traces prove and what they do not.
+const GoldenTraceProvenance = "Self-recorded magicite regression goldens: they verify magicite argv stability, not argv equivalence with maduin."
+
 var (
 	shaPattern       = regexp.MustCompile(`[0-9a-fA-F]{40}`)
 	timestampPattern = regexp.MustCompile(`\b[0-9]{4}-[0-9]{2}-[0-9]{2}(?:[T ][0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:?[0-9]{2})?)?\b`)
@@ -25,7 +28,8 @@ func init() {
 	flag.BoolVar(&updateGoldens, "update", false, "update parity golden files")
 }
 
-// AssertTrace compares entries with the named checked-in golden trace.
+// AssertTrace compares entries with the named magicite regression golden trace.
+// GoldenTraceProvenance limits the conclusion drawn from a passing comparison.
 func AssertTrace(t *testing.T, name string, entries []testenv.Entry) {
 	t.Helper()
 

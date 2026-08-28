@@ -1,3 +1,4 @@
 # target	reason	owner-bead
 cockpit	Magicite is headless and does not reproduce the Emacs cockpit UI.	magicite-5o2.2
 terminal	Magicite is headless and does not reproduce the Emacs terminal UI.	magicite-5o2.2
+golden-argv-traces	Maduin is not executed because the default suite must remain offline and require neither Emacs nor a local maduin checkout; passing goldens establish magicite argv stability only, not argv equivalence with maduin.	magicite-e85.5

@@ -20,6 +20,7 @@ func TestLoadLedgerJustifiesDomains(t *testing.T) {
 	want := []Divergence{
 		{Target: "cockpit", Reason: "Magicite is headless and does not reproduce the Emacs cockpit UI.", Owner: "magicite-5o2.2"},
 		{Target: "terminal", Reason: "Magicite is headless and does not reproduce the Emacs terminal UI.", Owner: "magicite-5o2.2"},
+		{Target: goldenArgvTraceTarget, Reason: "Maduin is not executed because the default suite must remain offline and require neither Emacs nor a local maduin checkout; passing goldens establish magicite argv stability only, not argv equivalence with maduin.", Owner: "magicite-e85.5"},
 	}
 	if got := ledger.Reasons(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("Reasons() = %#v, want %#v", got, want)
@@ -33,7 +34,7 @@ func TestParseLedgerRejectsInvalidRows(t *testing.T) {
 		want   string
 	}{
 		"empty reason": {"one\t\tmagicite-1\n", "malformed row"},
-		"orphan":       {"missing\treason\tmagicite-1\n", "unknown invariant or domain"},
+		"orphan":       {"missing\treason\tmagicite-1\n", "unknown invariant, domain, or limitation"},
 		"duplicate":    {"alpha\treason\tmagicite-1\nalpha\tagain\tmagicite-2\n", "duplicate target"},
 	} {
 		t.Run(name, func(t *testing.T) {

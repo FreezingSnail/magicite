@@ -54,3 +54,25 @@ func TestFirstDifferentLine(t *testing.T) {
 		t.Fatalf("firstDifferentLine() length mismatch = %d, want %d", got, want)
 	}
 }
+
+func TestGoldenTraceProvenance(t *testing.T) {
+	want := "Self-recorded magicite regression goldens: they verify magicite argv stability, not argv equivalence with maduin."
+	if GoldenTraceProvenance != want {
+		t.Fatalf("GoldenTraceProvenance = %q, want %q", GoldenTraceProvenance, want)
+	}
+
+	ledger, err := LoadLedger()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, divergence := range ledger.Reasons() {
+		if divergence.Target != goldenArgvTraceTarget {
+			continue
+		}
+		if !strings.Contains(divergence.Reason, "Maduin is not executed") || !strings.Contains(divergence.Reason, "not argv equivalence with maduin") {
+			t.Fatalf("golden trace limitation = %q", divergence.Reason)
+		}
+		return
+	}
+	t.Fatalf("missing %q ledger entry", goldenArgvTraceTarget)
+}

@@ -8,9 +8,12 @@ import (
 	"strings"
 )
 
-const ledgerFile = "divergences.tsv"
+const (
+	ledgerFile            = "divergences.tsv"
+	goldenArgvTraceTarget = "golden-argv-traces"
+)
 
-// LoadLedger reads deliberate divergences and rejects targets absent from the catalog.
+// LoadLedger reads deliberate divergences and the recorded golden-trace limitation.
 func LoadLedger() (Ledger, error) {
 	catalog, err := LoadCatalog()
 	if err != nil {
@@ -46,9 +49,11 @@ func parseLedger(reader io.Reader, catalog Catalog) (Ledger, error) {
 				return Ledger{}, fmt.Errorf("ledger line %d: malformed row", lineNumber)
 			}
 		}
-		if _, invariant := catalog.ByName[fields[0]]; !invariant {
-			if _, domain := catalog.ByDomain[fields[0]]; !domain {
-				return Ledger{}, fmt.Errorf("ledger line %d: unknown invariant or domain %q", lineNumber, fields[0])
+		if fields[0] != goldenArgvTraceTarget {
+			if _, invariant := catalog.ByName[fields[0]]; !invariant {
+				if _, domain := catalog.ByDomain[fields[0]]; !domain {
+					return Ledger{}, fmt.Errorf("ledger line %d: unknown invariant, domain, or limitation %q", lineNumber, fields[0])
+				}
 			}
 		}
 		if _, duplicate := ledger.byTarget[fields[0]]; duplicate {
