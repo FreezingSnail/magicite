@@ -11,13 +11,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/bd"
-	"github.com/connorfranc/magicite/internal/config"
-	"github.com/connorfranc/magicite/internal/dispatch"
-	"github.com/connorfranc/magicite/internal/logging"
-	"github.com/connorfranc/magicite/internal/repo"
-	"github.com/connorfranc/magicite/internal/server"
-	"github.com/connorfranc/magicite/internal/wire"
+	"github.com/FreezingSnail/magicite/internal/bd"
+	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/dispatch"
+	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/server"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 // Deps supplies the daemon dependencies exposed through server.Core.

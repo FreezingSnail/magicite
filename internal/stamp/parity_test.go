@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/parity"
+	"github.com/FreezingSnail/magicite/internal/parity"
 )
 
 func TestMaduinStampParity(t *testing.T) {

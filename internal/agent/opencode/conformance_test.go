@@ -3,8 +3,8 @@ package opencode
 import (
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/agent"
-	"github.com/connorfranc/magicite/internal/agent/conformance"
+	"github.com/FreezingSnail/magicite/internal/agent"
+	"github.com/FreezingSnail/magicite/internal/agent/conformance"
 )
 
 func TestConformance(t *testing.T) {

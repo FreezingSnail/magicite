@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/connorfranc/magicite/internal/wire"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 func init() {

@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/connorfranc/magicite/internal/cli"
+	"github.com/FreezingSnail/magicite/internal/cli"
 )
 
 func main() {

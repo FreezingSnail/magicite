@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/connorfranc/magicite/internal/bd"
+	"github.com/FreezingSnail/magicite/internal/bd"
 )
 
 // Call records one Bridge method invocation.

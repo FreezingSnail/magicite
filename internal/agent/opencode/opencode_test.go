@@ -8,8 +8,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/connorfranc/magicite/internal/agent"
-	"github.com/connorfranc/magicite/internal/agent/conformance"
+	"github.com/FreezingSnail/magicite/internal/agent"
+	"github.com/FreezingSnail/magicite/internal/agent/conformance"
 )
 
 func TestNew(t *testing.T) {

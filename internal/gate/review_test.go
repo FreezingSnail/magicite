@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/bd"
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/bd"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 func reviewGate(t *testing.T, beads *fakeBeads, records map[string]repo.Repo) *Gate {

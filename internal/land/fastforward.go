@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/connorfranc/magicite/internal/stamp"
+	"github.com/FreezingSnail/magicite/internal/stamp"
 )
 
 // fastForward advances integration to the seat branch without creating a merge commit.

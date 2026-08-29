@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/wire"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 func TestBusPublishStampsSequenceSchemaAndTime(t *testing.T) {

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/bd"
-	"github.com/connorfranc/magicite/internal/dispatch"
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/bd"
+	"github.com/FreezingSnail/magicite/internal/dispatch"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 var _ dispatch.Gate = (*Gate)(nil)

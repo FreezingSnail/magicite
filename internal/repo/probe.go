@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	magicexec "github.com/connorfranc/magicite/internal/exec"
-	"github.com/connorfranc/magicite/internal/logging"
+	magicexec "github.com/FreezingSnail/magicite/internal/exec"
+	"github.com/FreezingSnail/magicite/internal/logging"
 )
 
 // Prober checks whether a directory is an admitted fleet repository.

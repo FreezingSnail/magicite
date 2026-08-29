@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/logging"
 )
 
 func TestEnsureCreatesMissingSeatAndReusesRegisteredSeat(t *testing.T) {

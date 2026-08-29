@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/bd"
-	"github.com/connorfranc/magicite/internal/parity"
-	"github.com/connorfranc/magicite/internal/testenv"
+	"github.com/FreezingSnail/magicite/internal/bd"
+	"github.com/FreezingSnail/magicite/internal/parity"
+	"github.com/FreezingSnail/magicite/internal/testenv"
 )
 
 type bdParityFixture struct {

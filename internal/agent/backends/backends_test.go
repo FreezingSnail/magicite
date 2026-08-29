@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/agent"
-	"github.com/connorfranc/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/agent"
+	"github.com/FreezingSnail/magicite/internal/config"
 )
 
 func TestRegisterAddsBothBackends(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/connorfranc/magicite/internal/logging"
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 const orphanedInProgressReason = "orphaned in_progress"

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/config"
 )
 
 func TestFromConfig(t *testing.T) {

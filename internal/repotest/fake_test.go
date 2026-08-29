@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 func TestFakeSeedListAndRefresh(t *testing.T) {

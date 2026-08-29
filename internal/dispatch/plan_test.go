@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 func planRepo(t *testing.T) repo.Repo {

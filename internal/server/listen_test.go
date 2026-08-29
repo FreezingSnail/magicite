@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/config"
 )
 
 func listenPath(t *testing.T) string {

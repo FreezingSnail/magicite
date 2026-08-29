@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 // ErrUnknownRole reports a plan request for an unsupported dispatch role.

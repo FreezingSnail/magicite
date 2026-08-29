@@ -3,7 +3,7 @@ package server
 import (
 	"time"
 
-	"github.com/connorfranc/magicite/internal/wire"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 // Project converts a structured log record into the wire event vocabulary.

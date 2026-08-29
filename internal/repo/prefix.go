@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/connorfranc/magicite/internal/bd"
+	"github.com/FreezingSnail/magicite/internal/bd"
 )
 
 const maxConfigBytes = 64 * 1024

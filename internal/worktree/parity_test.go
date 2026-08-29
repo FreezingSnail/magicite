@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/parity"
+	"github.com/FreezingSnail/magicite/internal/parity"
 )
 
 type worktreeParityFixture struct {

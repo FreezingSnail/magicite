@@ -9,8 +9,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/logging"
-	"github.com/connorfranc/magicite/internal/wire"
+	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 func TestRouterRegister(t *testing.T) {

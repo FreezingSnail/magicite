@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/client"
-	"github.com/connorfranc/magicite/internal/wire"
+	"github.com/FreezingSnail/magicite/internal/client"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 const (

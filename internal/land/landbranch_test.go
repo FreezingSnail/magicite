@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/stamp"
+	"github.com/FreezingSnail/magicite/internal/stamp"
 )
 
 func TestOutcomeString(t *testing.T) {

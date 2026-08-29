@@ -3,7 +3,7 @@ package bd
 import (
 	"context"
 
-	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/logging"
 )
 
 // Show returns the bead identified by id.

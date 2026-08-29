@@ -7,7 +7,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/stamp"
+	"github.com/FreezingSnail/magicite/internal/stamp"
 )
 
 type messageRunner struct {

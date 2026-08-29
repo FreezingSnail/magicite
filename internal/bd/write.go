@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/logging"
 )
 
 // CreateRequest contains the mutable fields accepted by Create.

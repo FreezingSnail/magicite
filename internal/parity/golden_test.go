@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/testenv"
+	"github.com/FreezingSnail/magicite/internal/testenv"
 )
 
 func TestRenderTrace(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/connorfranc/magicite/internal/stamp"
+	"github.com/FreezingSnail/magicite/internal/stamp"
 )
 
 type replayCommit struct {

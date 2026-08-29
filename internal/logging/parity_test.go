@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/logging"
-	"github.com/connorfranc/magicite/internal/parity"
+	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/parity"
 )
 
 type parityPanicJSON struct{}

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/connorfranc/magicite/internal/stamp"
+	"github.com/FreezingSnail/magicite/internal/stamp"
 )
 
 // Outcome describes the result of a branch landing attempt.

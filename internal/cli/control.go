@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/connorfranc/magicite/internal/wire"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 // RegisterControl adds lifecycle commands to the CLI.

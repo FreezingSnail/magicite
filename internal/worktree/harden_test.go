@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/logging"
 )
 
 type hardenRunner struct {

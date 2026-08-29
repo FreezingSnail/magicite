@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/config"
 )
 
 func TestFinderAmbientCandidatesExplicitDoesNotProbe(t *testing.T) {

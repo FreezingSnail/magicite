@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/connorfranc/magicite/internal/dispatch"
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/dispatch"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 const (

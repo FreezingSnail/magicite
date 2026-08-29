@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/stamp"
+	"github.com/FreezingSnail/magicite/internal/stamp"
 )
 
 type orderedRunner struct {

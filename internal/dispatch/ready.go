@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 const defaultReadyPriority = "2"

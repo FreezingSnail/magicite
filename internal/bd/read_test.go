@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/logging"
 )
 
 func TestReadMethodsDecodeAndPreserveArgv(t *testing.T) {

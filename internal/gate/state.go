@@ -1,8 +1,8 @@
 package gate
 
 import (
-	"github.com/connorfranc/magicite/internal/logging"
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 type key struct {

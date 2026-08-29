@@ -3,7 +3,7 @@ package opencode
 import (
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/agent"
+	"github.com/FreezingSnail/magicite/internal/agent"
 )
 
 // These public helper checks back TestMaduinAgentParity without requiring its

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/config"
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 func outcomeDispatcher(t *testing.T, beads *fakeBeads, lander *fakeLander, runner *fakeRunner, gate *fakeGate) *Dispatcher {

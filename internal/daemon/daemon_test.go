@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/client"
-	"github.com/connorfranc/magicite/internal/gate"
-	"github.com/connorfranc/magicite/internal/server"
-	"github.com/connorfranc/magicite/internal/testenv"
-	"github.com/connorfranc/magicite/internal/wire"
+	"github.com/FreezingSnail/magicite/internal/client"
+	"github.com/FreezingSnail/magicite/internal/gate"
+	"github.com/FreezingSnail/magicite/internal/server"
+	"github.com/FreezingSnail/magicite/internal/testenv"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 func TestAssembleServesLifecycleOverProcessDoubles(t *testing.T) {

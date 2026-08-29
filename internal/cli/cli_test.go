@@ -6,8 +6,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/client"
-	"github.com/connorfranc/magicite/internal/wire"
+	"github.com/FreezingSnail/magicite/internal/client"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 func TestRunUsageAndGlobalFlags(t *testing.T) {

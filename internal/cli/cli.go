@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/client"
-	"github.com/connorfranc/magicite/internal/config"
-	"github.com/connorfranc/magicite/internal/server"
-	"github.com/connorfranc/magicite/internal/version"
+	"github.com/FreezingSnail/magicite/internal/client"
+	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/server"
+	"github.com/FreezingSnail/magicite/internal/version"
 )
 
 // Env contains the dependencies shared by every command.

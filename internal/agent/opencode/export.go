@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/connorfranc/magicite/internal/agent"
-	executil "github.com/connorfranc/magicite/internal/exec"
+	"github.com/FreezingSnail/magicite/internal/agent"
+	executil "github.com/FreezingSnail/magicite/internal/exec"
 )
 
 type exportDocument struct {

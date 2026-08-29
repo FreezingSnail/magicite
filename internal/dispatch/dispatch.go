@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/config"
-	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/logging"
 )
 
 // Log records a dispatcher lifecycle event.

@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/parity"
+	"github.com/FreezingSnail/magicite/internal/parity"
 )
 
 func TestMaduinConfigParity(t *testing.T) {

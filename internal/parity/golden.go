@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/testenv"
+	"github.com/FreezingSnail/magicite/internal/testenv"
 )
 
 var updateGoldens bool

@@ -3,8 +3,8 @@ package dispatch
 import (
 	"context"
 
-	"github.com/connorfranc/magicite/internal/logging"
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 // RepoEpics pairs a repository with its open epics.

@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/logging"
 )
 
 func TestGitRootAndAdmit(t *testing.T) {

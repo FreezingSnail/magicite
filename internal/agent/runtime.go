@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/logging"
 )
 
 // Runtime resolves adapters and owns their run handles.

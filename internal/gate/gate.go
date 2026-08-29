@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/connorfranc/magicite/internal/bd"
-	"github.com/connorfranc/magicite/internal/logging"
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/bd"
+	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 const defaultMaxRetries = 3

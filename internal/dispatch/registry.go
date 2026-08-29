@@ -4,7 +4,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 // SessionStatus describes a live session's current state.

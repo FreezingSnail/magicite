@@ -5,8 +5,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/decomp"
-	"github.com/connorfranc/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/decomp"
+	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
 // Role identifies a dispatch role.

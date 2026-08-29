@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/connorfranc/magicite/internal/agent"
+	"github.com/FreezingSnail/magicite/internal/agent"
 )
 
 // Event is one recognized OpenCode stream event.

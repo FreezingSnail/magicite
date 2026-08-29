@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/cli"
-	"github.com/connorfranc/magicite/internal/config"
-	"github.com/connorfranc/magicite/internal/daemon"
-	"github.com/connorfranc/magicite/internal/decomp"
-	"github.com/connorfranc/magicite/internal/dispatch"
-	magicexec "github.com/connorfranc/magicite/internal/exec"
-	"github.com/connorfranc/magicite/internal/parity"
-	"github.com/connorfranc/magicite/internal/repo"
-	"github.com/connorfranc/magicite/internal/testenv"
+	"github.com/FreezingSnail/magicite/internal/cli"
+	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/daemon"
+	"github.com/FreezingSnail/magicite/internal/decomp"
+	"github.com/FreezingSnail/magicite/internal/dispatch"
+	magicexec "github.com/FreezingSnail/magicite/internal/exec"
+	"github.com/FreezingSnail/magicite/internal/parity"
+	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/testenv"
 )
 
 func TestMaduinOrchestrationParity(t *testing.T) {

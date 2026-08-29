@@ -8,8 +8,8 @@ import (
 	"os"
 	osexec "os/exec"
 
-	magicexec "github.com/connorfranc/magicite/internal/exec"
-	"github.com/connorfranc/magicite/internal/logging"
+	magicexec "github.com/FreezingSnail/magicite/internal/exec"
+	"github.com/FreezingSnail/magicite/internal/logging"
 )
 
 // Result contains a bd invocation's exit status and independent output streams.

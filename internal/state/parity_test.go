@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/parity"
+	"github.com/FreezingSnail/magicite/internal/parity"
 )
 
 func TestMaduinStateParity(t *testing.T) {

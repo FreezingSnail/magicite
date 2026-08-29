@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/agent"
+	"github.com/FreezingSnail/magicite/internal/agent"
 )
 
 const (

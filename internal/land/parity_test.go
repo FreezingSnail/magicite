@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/parity"
+	"github.com/FreezingSnail/magicite/internal/parity"
 )
 
 func TestMaduinPipelineParity(t *testing.T) {

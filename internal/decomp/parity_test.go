@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/parity"
+	"github.com/FreezingSnail/magicite/internal/parity"
 )
 
 func TestMaduinDecompParity(t *testing.T) {

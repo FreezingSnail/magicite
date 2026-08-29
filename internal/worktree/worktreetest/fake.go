@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/connorfranc/magicite/internal/worktree"
+	"github.com/FreezingSnail/magicite/internal/worktree"
 )
 
 // Seat scripts results for one seat.

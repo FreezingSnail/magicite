@@ -5,12 +5,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/connorfranc/magicite/internal/config"
-	"github.com/connorfranc/magicite/internal/decomp"
-	"github.com/connorfranc/magicite/internal/dispatch"
-	"github.com/connorfranc/magicite/internal/repo"
-	"github.com/connorfranc/magicite/internal/server"
-	"github.com/connorfranc/magicite/internal/wire"
+	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/decomp"
+	"github.com/FreezingSnail/magicite/internal/dispatch"
+	"github.com/FreezingSnail/magicite/internal/repo"
+	"github.com/FreezingSnail/magicite/internal/server"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 func TestNewCoreRejectsNilDependencies(t *testing.T) {

@@ -3,8 +3,8 @@ package dispatch
 import (
 	"context"
 
-	"github.com/connorfranc/magicite/internal/config"
-	"github.com/connorfranc/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/logging"
 )
 
 // FallbackRetry starts one bounded retry when a session reaches a usage limit.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/connorfranc/magicite/internal/wire"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 var (

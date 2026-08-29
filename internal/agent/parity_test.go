@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/agent"
-	"github.com/connorfranc/magicite/internal/agent/backends"
-	"github.com/connorfranc/magicite/internal/agent/kiro"
-	"github.com/connorfranc/magicite/internal/agent/opencode"
-	"github.com/connorfranc/magicite/internal/config"
-	"github.com/connorfranc/magicite/internal/parity"
-	"github.com/connorfranc/magicite/internal/testenv"
+	"github.com/FreezingSnail/magicite/internal/agent"
+	"github.com/FreezingSnail/magicite/internal/agent/backends"
+	"github.com/FreezingSnail/magicite/internal/agent/kiro"
+	"github.com/FreezingSnail/magicite/internal/agent/opencode"
+	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/parity"
+	"github.com/FreezingSnail/magicite/internal/testenv"
 )
 
 func TestMaduinAgentParity(t *testing.T) {

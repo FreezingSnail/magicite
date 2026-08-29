@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/connorfranc/magicite/internal/logging"
-	"github.com/connorfranc/magicite/internal/server"
-	"github.com/connorfranc/magicite/internal/wire"
+	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/server"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 func TestControlCommandsRenderPlainAndJSON(t *testing.T) {
