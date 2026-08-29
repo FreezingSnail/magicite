@@ -3,12 +3,33 @@ package testenv
 
 import (
 	"fmt"
+	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
+	"syscall"
 	"testing"
 )
+
+const fakeProcessEnv = "MAGICITE_TESTENV_FAKE"
+
+// init dispatches a re-executed test binary to the fake it was published as.
+// Install refuses to publish any name this switch cannot route, so a marked
+// process carrying some other name is a test re-executing itself on purpose --
+// the parity offline probe does exactly that -- and must run as a test.
+func init() {
+	if os.Getenv(fakeProcessEnv) != "1" {
+		return
+	}
+	switch filepath.Base(os.Args[0]) {
+	case "bd":
+		RunFakeBD()
+	case "kiro", "opencode", "kiro-cli-chat":
+		RunFakeAgent()
+	default:
+		return
+	}
+	syscall.Exit(0)
+}
 
 // Env is an isolated filesystem and explicit environment for child processes.
 type Env struct {
@@ -45,7 +66,6 @@ func New(t *testing.T) *Env {
 		filepath.Join(root, "xdg", "config"),
 		filepath.Join(root, "xdg", "cache"),
 		filepath.Join(root, "xdg", "data"),
-		filepath.Join(root, "cache", "go"),
 	} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatalf("create test environment directory %q: %v", dir, err)
@@ -65,6 +85,7 @@ func (e *Env) Env() []string {
 		"MAGICITE_TRACE=" + e.TracePath,
 		"GIT_CONFIG_GLOBAL=" + filepath.Join(e.Root, "gitconfig"),
 		"GIT_CONFIG_NOSYSTEM=1",
+		fakeProcessEnv + "=1",
 	}
 	if e.fakeBDStore != "" {
 		env = append(env, "MAGICITE_FAKE_BD_STORE="+e.fakeBDStore)
@@ -80,27 +101,78 @@ func (e *Env) Env() []string {
 	return env
 }
 
-// Install builds srcPkg from the repository and installs it in BinDir as name.
+// Install publishes a re-executable fake CLI in BinDir as name. The test binary
+// is hardlinked rather than compiled, so a suite performs no builds at all.
 func (e *Env) Install(name, srcPkg string) string {
 	e.t.Helper()
 	if name == "" || filepath.Base(name) != name || name == "." {
 		e.t.Fatalf("invalid installed binary name %q", name)
 	}
+	if !fakePackage(srcPkg) {
+		e.t.Fatalf("unsupported fake package %q", srcPkg)
+	}
+	if !dispatchableFake(name) {
+		e.t.Fatalf("fake name %q has no dispatch in the re-executed test binary", name)
+	}
+	if path, ok := e.installed[name]; ok {
+		return path
+	}
 
-	root, err := repositoryRoot()
+	executable, err := os.Executable()
 	if err != nil {
-		e.t.Fatalf("locate repository root: %v", err)
+		e.t.Fatalf("locate test executable: %v", err)
 	}
 	path := filepath.Join(e.BinDir, name)
-	cmd := exec.Command("go", "build", "-o", path, srcPkg)
-	cmd.Dir = root
-	cmd.Env = append(e.Env(), "GOCACHE="+filepath.Join(e.Root, "cache", "go"))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		e.t.Fatalf("build %q as %q: %v\n%s", srcPkg, name, err, output)
+	temporary := path + ".tmp"
+	if err := publishExecutable(executable, temporary); err != nil {
+		_ = os.Remove(temporary)
+		e.t.Fatalf("publish fake %q: %v", name, err)
+	}
+	if err := os.Rename(temporary, path); err != nil {
+		_ = os.Remove(temporary)
+		e.t.Fatalf("publish fake %q: %v", name, err)
 	}
 	e.installed[name] = path
 	return path
+}
+
+// publishExecutable links source to destination, copying only when the two
+// cannot share an inode. A hardlink writes no bytes; the copy exists because
+// BinDir and the test binary may sit on different filesystems.
+func publishExecutable(source, destination string) error {
+	if err := os.Link(source, destination); err == nil {
+		return nil
+	}
+	reader, err := os.Open(source)
+	if err != nil {
+		return fmt.Errorf("open test executable: %w", err)
+	}
+	defer func() { _ = reader.Close() }()
+	writer, err := os.OpenFile(destination, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o755)
+	if err != nil {
+		return fmt.Errorf("create fake: %w", err)
+	}
+	if _, err := io.Copy(writer, reader); err != nil {
+		_ = writer.Close()
+		return fmt.Errorf("copy test executable: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("close fake: %w", err)
+	}
+	return nil
+}
+
+func fakePackage(srcPkg string) bool {
+	return srcPkg == "./cmd/fake-bd" || srcPkg == "./cmd/fake-agent"
+}
+
+// dispatchableFake reports whether init routes a process published as name.
+func dispatchableFake(name string) bool {
+	switch name {
+	case "bd", "kiro", "opencode", "kiro-cli-chat":
+		return true
+	}
+	return false
 }
 
 // Bin returns the path of an installed binary.
@@ -111,12 +183,4 @@ func (e *Env) Bin(name string) string {
 		e.t.Fatalf("binary %q is not installed", name)
 	}
 	return path
-}
-
-func repositoryRoot() (string, error) {
-	_, source, _, ok := runtime.Caller(0)
-	if !ok {
-		return "", fmt.Errorf("testenv source path unavailable")
-	}
-	return filepath.Abs(filepath.Join(filepath.Dir(source), "..", ".."))
 }

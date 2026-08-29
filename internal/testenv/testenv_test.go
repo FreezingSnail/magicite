@@ -34,18 +34,71 @@ func TestNewCreatesHermeticEnvironment(t *testing.T) {
 	}
 }
 
-func TestInstallBuildsAndResolvesBinary(t *testing.T) {
+func TestInstallReexecsTestBinaryWithoutCompiling(t *testing.T) {
 	env := New(t)
-	path := env.Install("fakebd", "./internal/bd/internal/fakebd")
-	if got, want := env.Bin("fakebd"), path; got != want {
-		t.Errorf("Bin(fakebd) = %q, want %q", got, want)
-	}
-	info, err := os.Stat(path)
+	path := env.Install("bd", "./cmd/fake-bd")
+	first, err := os.Stat(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode()&0o111 == 0 {
-		t.Errorf("installed mode = %v, want executable", info.Mode())
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiled, err := os.Stat(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !os.SameFile(first, compiled) {
+		t.Errorf("installed fake = %q, want hardlink to test executable %q", path, executable)
+	}
+	if got := env.Install("bd", "./cmd/fake-bd"); got != path {
+		t.Errorf("second Install() = %q, want %q", got, path)
+	}
+	second, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !os.SameFile(first, second) || len(env.installed) != 1 {
+		t.Errorf("repeated Install() republished fake: %v, installed = %#v", second, env.installed)
+	}
+}
+
+// Every name Install accepts must have a dispatch in init. A published fake that
+// init does not recognize would re-run the whole suite as a child process.
+func TestInstallableNamesAllDispatch(t *testing.T) {
+	for _, name := range []string{"bd", "kiro", "opencode", "kiro-cli-chat"} {
+		if !dispatchableFake(name) {
+			t.Errorf("dispatchableFake(%q) = false, want true", name)
+		}
+	}
+	for _, name := range []string{"", "bdx", "fake-bd", "magicite", "go"} {
+		if dispatchableFake(name) {
+			t.Errorf("dispatchableFake(%q) = true, want false", name)
+		}
+	}
+}
+
+// A hardlink writes no bytes, but BinDir and the test binary need not share a
+// filesystem. Linking across devices fails, and the copy path carries that case.
+func TestPublishExecutableCopiesAcrossFilesystems(t *testing.T) {
+	destination := filepath.Join(t.TempDir(), "fake")
+	if err := publishExecutable(os.DevNull, destination); err != nil {
+		t.Fatalf("publishExecutable(%q) error = %v", os.DevNull, err)
+	}
+	info, err := os.Stat(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Errorf("copied fake mode = %v, want 0755", info.Mode().Perm())
+	}
+	source, err := os.Stat(os.DevNull)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if os.SameFile(info, source) {
+		t.Errorf("published fake shares an inode with %q, want a copy", os.DevNull)
 	}
 }
 
