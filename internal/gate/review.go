@@ -87,7 +87,7 @@ func (g *Gate) DispatchVerdict(ctx context.Context, r repo.Repo, epic string, v 
 			return err
 		}
 		g.clear(k)
-		g.log.Event(logging.Info, "review-verdict", fields)
+		g.log.Event(logging.Info, logging.KindVerdict, fields)
 	case VerdictDrift:
 		id, err := g.CreateDriftFix(ctx, r, epic, v.Feedback)
 		if id != "" {
@@ -96,11 +96,11 @@ func (g *Gate) DispatchVerdict(ctx context.Context, r repo.Repo, epic string, v 
 		_ = g.beads.Comment(ctx, r, epic, v.Feedback)
 		fields["drift_fix"] = id
 		fields["feedback"] = v.Feedback
-		g.log.Event(logging.Warn, "review-verdict", fields)
+		g.log.Event(logging.Warn, logging.KindVerdict, fields)
 		return err
 	default:
 		_ = g.beads.Comment(ctx, r, epic, unparseableComment)
-		g.log.Event(logging.Error, "review-verdict", fields)
+		g.log.Event(logging.Error, logging.KindVerdict, fields)
 	}
 	return nil
 }

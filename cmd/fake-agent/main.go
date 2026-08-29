@@ -91,10 +91,13 @@ func unrecognizedArg(args []string, index int) error {
 func runScenario(ctx context.Context, scenario string) error {
 	switch scenario {
 	case "complete":
-		return emitAll(ctx, "ses_completed", []string{
-			`{"type":"step_start","sessionID":"ses_completed"}`,
-			`{"type":"step_finish","sessionID":"ses_completed","part":{"reason":"stop"}}`,
-		}, 0)
+		return complete(ctx, "ses_completed", "")
+	case "review-approved":
+		return complete(ctx, "ses_review_approved", "REVIEW: APPROVED")
+	case "review-drift":
+		return complete(ctx, "ses_review_drift", "REVIEW: DRIFT: repair the review finding")
+	case "review-unparseable":
+		return complete(ctx, "ses_review_unparseable", "review complete without marker")
 	case "denied":
 		return emitAll(ctx, "ses_denied", []string{
 			`{"type":"step_start","sessionID":"ses_denied"}`,
@@ -127,6 +130,17 @@ func runScenario(ctx context.Context, scenario string) error {
 	default:
 		return fmt.Errorf("unrecognized fake agent scenario %q", scenario)
 	}
+}
+
+func complete(ctx context.Context, sessionID, transcript string) error {
+	lines := []string{
+		fmt.Sprintf(`{"type":"step_start","sessionID":%q}`, sessionID),
+	}
+	if transcript != "" {
+		lines = append(lines, transcript)
+	}
+	lines = append(lines, fmt.Sprintf(`{"type":"step_finish","sessionID":%q,"part":{"reason":"stop"}}`, sessionID))
+	return emitAll(ctx, sessionID, lines, 0)
 }
 
 func emitAll(ctx context.Context, sessionID string, lines []string, delay time.Duration) error {

@@ -370,7 +370,7 @@ func create(value *store, args []string) (string, bool, error) {
 		case "--labels":
 			item.Labels = splitLabels(argument)
 		case "--priority":
-			priority, err := strconv.Atoi(argument)
+			priority, err := strconv.Atoi(strings.TrimPrefix(argument, "P"))
 			if err != nil {
 				return "", false, usage("create")
 			}

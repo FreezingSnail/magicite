@@ -16,8 +16,12 @@ func TestScenariosEmitCompleteNDJSONWithExpectedExit(t *testing.T) {
 		scenario string
 		exitOK   bool
 		complete bool
+		verdict  string
 	}{
 		{scenario: "complete", exitOK: true, complete: true},
+		{scenario: "review-approved", exitOK: true, complete: true, verdict: "REVIEW: APPROVED"},
+		{scenario: "review-drift", exitOK: true, complete: true, verdict: "REVIEW: DRIFT: repair the review finding"},
+		{scenario: "review-unparseable", exitOK: true, complete: true, verdict: "review complete without marker"},
 		{scenario: "denied", exitOK: true},
 		{scenario: "limited", exitOK: true},
 		{scenario: "failed"},
@@ -36,6 +40,9 @@ func TestScenariosEmitCompleteNDJSONWithExpectedExit(t *testing.T) {
 			hasCompletion := false
 			scanner := bufio.NewScanner(strings.NewReader(string(stdout)))
 			for scanner.Scan() {
+				if scanner.Text() == test.verdict {
+					continue
+				}
 				var event struct {
 					Type string `json:"type"`
 					Part struct {
@@ -52,6 +59,9 @@ func TestScenariosEmitCompleteNDJSONWithExpectedExit(t *testing.T) {
 			}
 			if hasCompletion != test.complete {
 				t.Errorf("completion = %t, want %t; stream=%q", hasCompletion, test.complete, stdout)
+			}
+			if test.verdict != "" && !strings.Contains(string(stdout), test.verdict) {
+				t.Errorf("stream = %q, want verdict %q", stdout, test.verdict)
 			}
 		})
 	}

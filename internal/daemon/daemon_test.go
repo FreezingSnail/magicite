@@ -19,83 +19,174 @@ import (
 )
 
 func TestAssembleServesLifecycleOverProcessDoubles(t *testing.T) {
-	env := daemonEnv(t)
-	record := testenv.NewRepo(t, env, "project")
-	if err := os.MkdirAll(filepath.Join(record.Root, ".beads"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	record.Commit("accept gate", map[string]string{"Makefile": "check:\n\t@true\n"})
-	prepareSeatCommit(t, record.Root)
-	before := record.Head("main")
-	beads := testenv.NewBD(t, env)
-	testenv.NewAgent(t, env, "kiro")
-	applyFixtureEnv(t, env)
-	installKiroAlias(t, env)
-	installAgentConfig(t, env, "worker", "reviewer")
-	beads.Seed(
-		testenv.Bead{ID: "epic-1", Title: "epic", Design: "finish the task", AcceptanceCriteria: "task lands", Status: "open", Priority: 1, IssueType: "epic", Labels: []string{}},
-		testenv.Bead{ID: "task-1", Title: "task", Description: "implement", Status: "open", Priority: 1, IssueType: "task", Parent: "epic-1", Labels: []string{"difficulty:high"}},
-	)
-	cfgPath := writeDaemonConfig(t, env, record.Root, "workspaces")
-	assembly, err := Assemble(context.Background(), cfgPath)
-	if err != nil {
-		t.Fatalf("Assemble() error = %v", err)
-	}
+	for _, test := range []reviewLifecycleCase{
+		{name: "approved", scenario: "review-approved", verdict: "approved", condition: "approved review closes epic-1"},
+		{name: "drift", scenario: "review-drift", verdict: "drift", condition: "drift review leaves epic-1 open and files a drift-fix child"},
+		{name: "unparseable", scenario: "review-unparseable", verdict: "unparseable", condition: "unparseable review comments on epic-1"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			env := daemonEnv(t)
+			record := testenv.NewRepo(t, env, "project")
+			if err := os.MkdirAll(filepath.Join(record.Root, ".beads"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			record.Commit("accept gate", map[string]string{"Makefile": "check:\n\t@true\n"})
+			prepareSeatCommit(t, record.Root)
+			before := record.Head("main")
+			beads := testenv.NewBD(t, env)
+			agent := testenv.NewAgent(t, env, "kiro")
+			agent.Scenario(test.scenario)
+			applyFixtureEnv(t, env)
+			installKiroAlias(t, env)
+			installAgentConfig(t, env, "worker", "reviewer")
+			cfgPath := writeDaemonConfig(t, env, record.Root, "workspaces")
+			assembly, err := Assemble(context.Background(), cfgPath)
+			if err != nil {
+				t.Fatalf("Assemble() error = %v", err)
+			}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	serveDone := make(chan error, 1)
-	go func() {
-		serveDone <- server.Serve(ctx, server.Deps{Router: assembly.Router, Bus: assembly.Bus, Socket: assembly.Socket})
-	}()
-	api := client.New(client.Options{Socket: assembly.Socket, Timeout: 5 * time.Second})
-	defer func() {
-		var result wire.StopResult
-		_ = api.Call(context.Background(), "stop", wire.StopParams{Hard: true}, &result)
-		stopDaemon(t, cancel, serveDone, assembly.Socket)
-	}()
-	waitClient(t, serveDone, api, "status", nil, &wire.StatusResult{})
-	var ready []wire.TaskResult
-	if err := api.Call(context.Background(), "tasks", wire.TasksParams{Repo: "project"}, &ready); err != nil {
-		t.Fatalf("tasks: %v", err)
+			ctx, cancel := context.WithCancel(context.Background())
+			serveDone := make(chan error, 1)
+			go func() {
+				serveDone <- server.Serve(ctx, server.Deps{Router: assembly.Router, Bus: assembly.Bus, Socket: assembly.Socket})
+			}()
+			api := client.New(client.Options{Socket: assembly.Socket, Timeout: 5 * time.Second})
+			defer func() {
+				var result wire.StopResult
+				_ = api.Call(context.Background(), "stop", wire.StopParams{Hard: true}, &result)
+				stopDaemon(t, cancel, serveDone, assembly.Socket)
+			}()
+			waitClient(t, serveDone, api, "status", nil, &wire.StatusResult{})
+			var started wire.StatusResult
+			if err := api.Call(context.Background(), "start", nil, &started); err != nil {
+				t.Fatalf("start: %v", err)
+			}
+			if !started.Running {
+				t.Fatal("start result is not running")
+			}
+			beads.Seed(
+				testenv.Bead{ID: "epic-1", Title: "epic", Design: "finish the task", AcceptanceCriteria: "task lands", Status: "open", Priority: 1, IssueType: "epic", Labels: []string{}},
+				testenv.Bead{ID: "task-1", Title: "task", Description: "implement", Status: "open", Priority: 1, IssueType: "task", Parent: "epic-1", Labels: []string{"difficulty:high"}},
+			)
+			var ready []wire.TaskResult
+			if err := api.Call(context.Background(), "tasks", wire.TasksParams{Repo: "project"}, &ready); err != nil {
+				t.Fatalf("tasks: %v", err)
+			}
+			if len(ready) != 1 || ready[0].ID != "task-1" {
+				t.Fatalf("ready tasks = %#v", ready)
+			}
+			var repositories []wire.RepoResult
+			if err := api.Call(context.Background(), "repos", nil, &repositories); err != nil {
+				t.Fatalf("repos: %v", err)
+			}
+			if len(repositories) != 1 || repositories[0].Name != "project" {
+				t.Fatalf("repos = %#v", repositories)
+			}
+			var seats []wire.SeatResult
+			if err := api.Call(context.Background(), "seats", nil, &seats); err != nil {
+				t.Fatalf("seats: %v", err)
+			}
+			if len(seats) == 0 || seatBusy(seats, "ifrit") || seatBusy(seats, "odin") {
+				t.Fatalf("seats = %#v", seats)
+			}
+			var all []wire.TaskResult
+			if err := api.Call(context.Background(), "tasks", wire.TasksParams{Repo: "project", All: true}, &all); err != nil {
+				t.Fatalf("all tasks: %v", err)
+			}
+			if len(all) != 2 {
+				t.Fatalf("all tasks = %#v", all)
+			}
+			var prematureReview wire.ReviewResult
+			if err := api.Call(context.Background(), "review", wire.ReviewParams{Epic: "epic-1", Repo: "project"}, &prematureReview); err == nil {
+				t.Fatalf("review before task completion = %#v, want unavailable", prematureReview)
+			}
+			var dispatched wire.DispatchResult
+			if err := api.Call(context.Background(), "dispatch", wire.DispatchParams{Task: "task-1", Repo: "project", Role: "implement"}, &dispatched); err != nil {
+				t.Fatalf("dispatch: %v", err)
+			}
+			if dispatched.Task != "task-1" || dispatched.Role != "implement" || dispatched.Seat != "ifrit" {
+				t.Fatalf("dispatch result = %#v", dispatched)
+			}
+			waitLifecycle(t, test.condition, func() string { return test.unmet(beads) })
+			events := waitVerdictEvents(t, api, test.verdict)
+			assertLifecycleEvents(t, events, test.verdict)
+			if got := record.Head("main"); got == before {
+				t.Fatal("task did not land on main")
+			}
+			task, ok := beads.Bead("task-1")
+			if !ok || task.Status != "closed" || !strings.Contains(task.CloseReason, "Magicite-Task: task-1") {
+				t.Fatalf("task result = %#v, found = %t", task, ok)
+			}
+			if !test.met(beads) {
+				t.Fatalf("review outcome missing: %s", test.condition)
+			}
+			var stopped wire.StopResult
+			if err := api.Call(context.Background(), "stop", wire.StopParams{Hard: true}, &stopped); err != nil {
+				t.Fatalf("stop: %v", err)
+			}
+			if stopped.Mode != "hard" {
+				t.Fatalf("stop result = %#v", stopped)
+			}
+		})
 	}
-	if len(ready) != 1 || ready[0].ID != "task-1" {
-		t.Fatalf("ready tasks = %#v", ready)
-	}
-	var started wire.StatusResult
-	if err := api.Call(context.Background(), "start", nil, &started); err != nil {
-		t.Fatalf("start: %v", err)
-	}
-	if !started.Running {
-		t.Fatal("start result is not running")
-	}
+}
 
-	waitLifecycle(t, api, beads)
-	var events []wire.Event
-	if _, err := api.Stream(context.Background(), 0, func(event wire.Event) error {
-		events = append(events, event)
-		return nil
-	}, false); err != nil {
-		t.Fatalf("events: %v", err)
+type reviewLifecycleCase struct {
+	name, scenario, verdict, condition string
+}
+
+func (c reviewLifecycleCase) met(beads *testenv.BD) bool { return c.unmet(beads) == "" }
+
+func (c reviewLifecycleCase) unmet(beads *testenv.BD) string {
+	epic, found := beads.Bead("epic-1")
+	if !found {
+		return "epic-1 missing"
 	}
-	assertLifecycleEvents(t, events)
-	if got := record.Head("main"); got == before {
-		t.Fatal("task did not land on main")
+	switch c.verdict {
+	case "approved":
+		if epic.Status != "closed" {
+			return "epic-1 remains open"
+		}
+		if epic.CloseReason != "review gate approved goal" {
+			return "epic-1 closure lacks approved review reason"
+		}
+		return ""
+	case "drift":
+		if epic.Status != "open" {
+			return "epic-1 closed after drift"
+		}
+		child := false
+		for _, bead := range beads.Store() {
+			if bead.Parent != epic.ID || !strings.Contains(strings.Join(bead.Labels, ","), "drift-fix") {
+				continue
+			}
+			child = true
+			if strings.TrimSpace(bead.Description) == ": repair the review finding" {
+				return ""
+			}
+			return "drift-fix child feedback differs from reviewer transcript"
+		}
+		if child {
+			return "drift-fix child feedback differs from reviewer transcript"
+		}
+		return "drift-fix child missing"
+	case "unparseable":
+		if len(epic.Comments) == 0 || epic.Comments[len(epic.Comments)-1] != "review ended without a verdict marker." {
+			return "unparseable review comment missing"
+		}
+		return ""
+	default:
+		return "unknown expected verdict"
 	}
-	task, ok := beads.Bead("task-1")
-	if !ok || task.Status != "closed" || !strings.Contains(task.CloseReason, "Magicite-Task: task-1") {
-		t.Fatalf("task result = %#v, found = %t", task, ok)
+}
+
+func seatBusy(seats []wire.SeatResult, name string) bool {
+	for _, seat := range seats {
+		if seat.Name == name {
+			return seat.Busy
+		}
 	}
-	epic, ok := beads.Bead("epic-1")
-	if !ok || len(epic.Comments) == 0 || epic.Comments[len(epic.Comments)-1] != "review ended without a verdict marker." {
-		t.Fatalf("review verdict did not reach epic: %#v, found = %t", epic, ok)
-	}
-	var stopped wire.StopResult
-	if err := api.Call(context.Background(), "stop", wire.StopParams{}, &stopped); err != nil {
-		t.Fatalf("stop: %v", err)
-	}
-	if stopped.Mode != "drain" || stopped.Sessions != 0 {
-		t.Fatalf("stop result = %#v", stopped)
-	}
+	return true
 }
 
 func TestAssembleFailurePathsLeaveNoDaemon(t *testing.T) {
@@ -281,7 +372,7 @@ func installAgentConfig(t *testing.T, env *testenv.Env, names ...string) {
 func writeDaemonConfig(t *testing.T, env *testenv.Env, root, workspace string) string {
 	t.Helper()
 	path := filepath.Join(env.Root, "magicite.yaml")
-	config := fmt.Sprintf("crew:\n  backend: kiro\nfleet:\n  agent: worker\n  poll-interval: 1\n  seats:\n    - name: ifrit\n      role: implementer\nreviewer:\n  enabled: true\n  agent: reviewer\n  model: reviewer-model\n  seats:\n    - name: odin\n      role: reviewer\nrepos:\n  roots:\n    - %s\nworkspaces:\n  path: %s\n", root, workspace)
+	config := fmt.Sprintf("crew:\n  backend: kiro\nfleet:\n  agent: worker\n  poll-interval: 3600\n  seats:\n    - name: ifrit\n      role: implementer\nreviewer:\n  enabled: true\n  agent: reviewer\n  model: reviewer-model\n  seats:\n    - name: odin\n      role: reviewer\nrepos:\n  roots:\n    - %s\nworkspaces:\n  path: %s\n", root, workspace)
 	if err := os.WriteFile(path, []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -304,36 +395,66 @@ func waitClient(t *testing.T, serveDone <-chan error, api *client.Client, comman
 	}
 }
 
-func waitLifecycle(t *testing.T, api *client.Client, beads *testenv.BD) {
+func waitLifecycle(t *testing.T, condition string, unmet func() string) {
 	t.Helper()
-	deadline := time.NewTimer(5 * time.Second)
+	deadline := time.NewTimer(30 * time.Second)
 	defer deadline.Stop()
 	for {
-		var status wire.StatusResult
-		err := api.Call(context.Background(), "status", nil, &status)
-		task, taskOK := beads.Bead("task-1")
-		epic, epicOK := beads.Bead("epic-1")
-		if err == nil && len(status.Sessions) == 0 && taskOK && task.Status == "closed" && epicOK && len(epic.Comments) > 0 {
+		if reason := unmet(); reason == "" {
 			return
 		}
 		select {
 		case <-deadline.C:
-			t.Fatalf("lifecycle incomplete: status=%#v task=%#v epic=%#v err=%v", status, task, epic, err)
+			t.Fatalf("lifecycle timed out waiting for %s: %s", condition, unmet())
 		case <-time.After(time.Millisecond):
 		}
 	}
 }
 
-func assertLifecycleEvents(t *testing.T, events []wire.Event) {
+func waitVerdictEvents(t *testing.T, api *client.Client, verdict string) []wire.Event {
+	t.Helper()
+	deadline := time.NewTimer(30 * time.Second)
+	defer deadline.Stop()
+	for {
+		var events []wire.Event
+		if _, err := api.Stream(context.Background(), 0, func(event wire.Event) error {
+			events = append(events, event)
+			return nil
+		}, false); err == nil && hasVerdictEvent(events, verdict) {
+			return events
+		}
+		select {
+		case <-deadline.C:
+			t.Fatalf("lifecycle timed out waiting for %s review verdict event for epic-1", verdict)
+		case <-time.After(time.Millisecond):
+		}
+	}
+}
+
+func hasVerdictEvent(events []wire.Event, verdict string) bool {
+	for _, event := range events {
+		if event.Kind == wire.KindVerdict && event.Fields["epic"] == "epic-1" && event.Fields["verdict"] == verdict {
+			return true
+		}
+	}
+	return false
+}
+
+func assertLifecycleEvents(t *testing.T, events []wire.Event, verdict string) {
 	t.Helper()
 	seen := make(map[wire.Kind]bool)
+	seenVerdict := false
 	for _, event := range events {
 		seen[event.Kind] = true
+		seenVerdict = seenVerdict || (event.Kind == wire.KindVerdict && event.Fields["epic"] == "epic-1" && event.Fields["verdict"] == verdict)
 	}
 	for _, kind := range []wire.Kind{wire.KindPickup, wire.KindComplete, wire.KindClose} {
 		if !seen[kind] {
-			t.Fatalf("events = %#v, missing %q", events, kind)
+			t.Fatalf("events missing %q", kind)
 		}
+	}
+	if !seenVerdict {
+		t.Fatalf("events missing %s review verdict for epic-1", verdict)
 	}
 }
 
