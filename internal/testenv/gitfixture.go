@@ -47,7 +47,9 @@ func NewRepo(t *testing.T, env *Env, name string) *Repo {
 		env:      env,
 		nextDate: time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 	}
-	repo.gitAt(env.Root, "init", "--quiet", "--initial-branch=main", repo.Root)
+	// An empty template skips the sample hooks, exclude file and description git
+	// otherwise copies into every fixture. No fixture test runs a hook.
+	repo.gitAt(env.Root, "init", "--quiet", "--template=", "--initial-branch=main", repo.Root)
 	repo.git("config", "user.name", fixtureGitName)
 	repo.git("config", "user.email", fixtureGitEmail)
 	repo.Commit("initial", nil)
