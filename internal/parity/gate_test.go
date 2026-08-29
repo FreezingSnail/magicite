@@ -14,7 +14,18 @@ import (
 	"github.com/FreezingSnail/magicite/internal/testenv"
 )
 
-const parityBudget = time.Minute
+// parityBudgetPerInvariant bounds replay cost per catalog invariant rather than
+// bounding the suite with one wall-clock total. A total cannot distinguish a
+// regression from a larger catalog or a loaded machine, and raising it is the only
+// available response; a rate keeps its meaning as invariants are added.
+//
+// Measured 5.1 to 5.9 s for 444 invariants, about 12 ms each, on an Apple M3 Pro
+// laptop running the full suite under go test -race -cover with the fakes published
+// by hardlink rather than compiled. The rate below allows four times that, which
+// absorbs a loaded machine without letting a genuine slowdown pass. Before the
+// fakes stopped being recompiled per test the same suite took 30 to 49 s, so a
+// regression that reintroduces per-test compilation trips this immediately.
+const parityBudgetPerInvariant = 50 * time.Millisecond
 
 var parityStarted time.Time
 
@@ -209,10 +220,18 @@ func TestParityOfflineProbe(t *testing.T) {
 	}
 }
 
+// TestParityBudget bounds replay cost at a measured rate per catalog invariant, so
+// the gate scales with the catalog instead of being raised whenever it grows.
 func TestParityBudget(t *testing.T) {
 	elapsed := time.Since(parityStarted)
-	if elapsed > parityBudget {
-		t.Fatalf("parity suite exceeded %s: %s", parityBudget, elapsed)
+	catalog, err := LoadCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	budget := time.Duration(len(catalog.Entries)) * parityBudgetPerInvariant
+	if elapsed > budget {
+		t.Fatalf("parity suite exceeded %s for %d invariants (%s each, budget %s each): %s",
+			budget, len(catalog.Entries), elapsed/time.Duration(len(catalog.Entries)), parityBudgetPerInvariant, elapsed)
 	}
 }
 
