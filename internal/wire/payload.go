@@ -1,5 +1,7 @@
 package wire
 
+import "time"
+
 // SessionResult describes one daemon-managed agent session.
 type SessionResult struct {
 	Handle        string `json:"handle"`
@@ -100,4 +102,78 @@ type ReviewResult struct {
 	Repo   string `json:"repo"`
 	Handle string `json:"handle"`
 	Held   bool   `json:"held"`
+}
+
+// SnapshotResult is one coherent daemon-owned fleet snapshot.
+type SnapshotResult struct {
+	ModelVersion     int               `json:"model_version"`
+	Generation       uint64            `json:"generation"`
+	CapturedAt       time.Time         `json:"captured_at"`
+	Cursor           uint64            `json:"cursor"`
+	Fresh            bool              `json:"fresh"`
+	Stale            bool              `json:"stale"`
+	Runtime          StatusResult      `json:"runtime"`
+	Repositories     []RepoResult      `json:"repositories"`
+	Seats            []SeatResult      `json:"seats"`
+	Sessions         []SessionResult   `json:"sessions"`
+	Beads            []BeadResult      `json:"beads"`
+	StatusCounts     []StatusCount     `json:"status_counts"`
+	RepositoryErrors []RepositoryError `json:"repository_errors"`
+}
+
+// BeadResult describes a complete bead and its daemon-derived workflow state.
+type BeadResult struct {
+	ID                 string             `json:"id"`
+	Repo               string             `json:"repo"`
+	Title              string             `json:"title"`
+	Description        *string            `json:"description"`
+	Design             *string            `json:"design"`
+	AcceptanceCriteria *string            `json:"acceptance_criteria"`
+	Status             string             `json:"status"`
+	Priority           int                `json:"priority"`
+	IssueType          string             `json:"issue_type"`
+	Assignee           *string            `json:"assignee"`
+	Owner              *string            `json:"owner"`
+	Parent             *string            `json:"parent"`
+	CreatedAt          *time.Time         `json:"created_at"`
+	CreatedBy          *string            `json:"created_by"`
+	UpdatedAt          *time.Time         `json:"updated_at"`
+	StartedAt          *time.Time         `json:"started_at"`
+	ClosedAt           *time.Time         `json:"closed_at"`
+	DeferredUntil      *time.Time         `json:"deferred_until"`
+	CloseReason        *string            `json:"close_reason"`
+	DependencyCount    int                `json:"dependency_count"`
+	DependentCount     int                `json:"dependent_count"`
+	CommentCount       int                `json:"comment_count"`
+	Dependencies       []DependencyResult `json:"dependencies"`
+	Labels             []string           `json:"labels"`
+	Staged             bool               `json:"staged"`
+	Dispatch           Eligibility        `json:"dispatch"`
+	Review             Eligibility        `json:"review"`
+}
+
+// DependencyResult summarizes one bead dependency edge.
+type DependencyResult struct {
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	Status string `json:"status"`
+	Type   string `json:"type"`
+}
+
+// StatusCount reports the number of beads in one status.
+type StatusCount struct {
+	Status string `json:"status"`
+	Count  int    `json:"count"`
+}
+
+// RepositoryError reports a named repository snapshot failure.
+type RepositoryError struct {
+	Repository string `json:"repository"`
+	Error      string `json:"error"`
+}
+
+// Eligibility states whether a workflow operation is currently available.
+type Eligibility struct {
+	Eligible bool    `json:"eligible"`
+	Reason   *string `json:"reason"`
 }
