@@ -1,0 +1,43 @@
+[
+  {
+    "id": "magicite-qik.2",
+    "title": "complete bead",
+    "description": "preserve source record",
+    "design": "decode directly",
+    "acceptance_criteria": "all fields survive",
+    "status": "closed",
+    "priority": 1,
+    "issue_type": "task",
+    "assignee": "agent",
+    "owner": "owner@example.test",
+    "parent": "magicite-qik",
+    "created_at": "2026-09-07T20:00:00Z",
+    "created_by": "creator",
+    "updated_at": "2026-09-07T20:01:00Z",
+    "started_at": "2026-09-07T20:02:00Z",
+    "closed_at": "2026-09-07T20:03:00Z",
+    "close_reason": "implemented",
+    "deferred_until": "2026-09-08T00:00:00Z",
+    "dependency_count": 2,
+    "dependent_count": 3,
+    "comment_count": 2,
+    "labels": ["staged", "difficulty:high"],
+    "comments": ["first comment", "second comment"],
+    "dependencies": [
+      {
+        "id": "magicite-qik.1",
+        "title": "summary dependency",
+        "status": "closed",
+        "dependency_type": "blocks"
+      },
+      {
+        "issue_id": "magicite-qik.2",
+        "depends_on_id": "magicite-qik",
+        "type": "parent-child",
+        "created_at": "2026-09-07T20:00:00Z",
+        "created_by": "creator",
+        "metadata": "{}"
+      }
+    ]
+  }
+]

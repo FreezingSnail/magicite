@@ -95,3 +95,23 @@ func runFake(env *Env, args ...string) ([]byte, []byte, error) {
 	err := command.Run()
 	return []byte(stdout.String()), []byte(stderr.String()), err
 }
+func TestBDAllRecordJSONPreservesSeedMetadata(t *testing.T) {
+	env := New(t)
+	fake := NewBD(t, env)
+	fake.Seed(Bead{
+		ID: "bd-1", Status: "closed", IssueType: "task", CreatedBy: "creator", ClosedAt: "2026-09-07T20:03:00Z", CloseReason: "implemented", DeferredUntil: "2026-09-08T00:00:00Z",
+		Labels: []string{"staged", "difficulty:high"}, Comments: []string{"first", "second"},
+		Dependencies: []Dependency{{ID: "bd-0", Title: "dependency", Status: "closed", DependencyType: "blocks"}},
+	})
+	stdout, stderr, err := runFake(env, "list", "--json", "--all")
+	if err != nil {
+		t.Fatalf("list all: %v: %s", err, stderr)
+	}
+	var beads []Bead
+	if err := json.Unmarshal(stdout, &beads); err != nil {
+		t.Fatal(err)
+	}
+	if len(beads) != 1 || beads[0].CreatedBy != "creator" || beads[0].ClosedAt == "" || beads[0].CloseReason != "implemented" || beads[0].DeferredUntil == "" || !reflect.DeepEqual(beads[0].Labels, []string{"staged", "difficulty:high"}) || !reflect.DeepEqual(beads[0].Comments, []string{"first", "second"}) || len(beads[0].Dependencies) != 1 {
+		t.Fatalf("beads = %#v", beads)
+	}
+}

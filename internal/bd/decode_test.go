@@ -121,3 +121,48 @@ func readFixture(t *testing.T, name string) []byte {
 	}
 	return contents
 }
+func TestDecodeSnapshotBeadMetadata(t *testing.T) {
+	beads, err := DecodeBeads(readFixture(t, "snapshot-bead.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(beads) != 1 {
+		t.Fatalf("beads = %#v", beads)
+	}
+	bead := beads[0]
+	if bead.CreatedBy != "creator" || bead.ClosedAt != "2026-09-07T20:03:00Z" || bead.CloseReason != "implemented" || bead.DeferredUntil != "2026-09-08T00:00:00Z" {
+		t.Fatalf("closure metadata = %#v", bead)
+	}
+	if got, want := strings.Join(bead.Labels, ","), "staged,difficulty:high"; got != want {
+		t.Errorf("labels = %q, want %q", got, want)
+	}
+	if got, want := strings.Join(bead.Comments, ","), "first comment,second comment"; got != want {
+		t.Errorf("comments = %q, want %q", got, want)
+	}
+	if len(bead.Dependencies) != 2 {
+		t.Fatalf("dependencies = %#v", bead.Dependencies)
+	}
+	summary, raw := bead.Dependencies[0], bead.Dependencies[1]
+	if summary.ID != "magicite-qik.1" || summary.Title != "summary dependency" || summary.Status != "closed" || summary.DependencyType != "blocks" {
+		t.Errorf("dependency summary = %#v", summary)
+	}
+	if raw.IssueID != "magicite-qik.2" || raw.DependsOnID != "magicite-qik" || raw.Type != "parent-child" || raw.CreatedBy != "creator" || raw.Metadata != "{}" {
+		t.Errorf("raw dependency = %#v", raw)
+	}
+
+	minimal, err := DecodeBeads([]byte(`[{"id":"minimal"}]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if minimal[0].Labels != nil || minimal[0].Comments != nil || minimal[0].ClosedAt != "" || minimal[0].DeferredUntil != "" {
+		t.Errorf("missing optional fields = %#v", minimal[0])
+	}
+
+	empty, err := DecodeBeads([]byte(`[{"id":"empty","labels":[],"comments":[],"dependencies":[]}]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if empty[0].Labels == nil || empty[0].Comments == nil || empty[0].Dependencies == nil {
+		t.Errorf("empty arrays = %#v", empty[0])
+	}
+}

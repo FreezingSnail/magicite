@@ -12,37 +12,9 @@ import (
 	"syscall"
 )
 
-type dependency struct {
-	ID             string `json:"id"`
-	Title          string `json:"title"`
-	Status         string `json:"status"`
-	DependencyType string `json:"dependency_type"`
-}
+type dependency = Dependency
 
-type bead struct {
-	ID                 string       `json:"id"`
-	Title              string       `json:"title"`
-	Description        string       `json:"description"`
-	Design             string       `json:"design"`
-	AcceptanceCriteria string       `json:"acceptance_criteria"`
-	Status             string       `json:"status"`
-	Priority           int          `json:"priority"`
-	IssueType          string       `json:"issue_type"`
-	Assignee           string       `json:"assignee"`
-	Owner              string       `json:"owner"`
-	Parent             string       `json:"parent"`
-	CreatedAt          string       `json:"created_at"`
-	UpdatedAt          string       `json:"updated_at"`
-	StartedAt          string       `json:"started_at"`
-	DependencyCount    int          `json:"dependency_count"`
-	DependentCount     int          `json:"dependent_count"`
-	CommentCount       int          `json:"comment_count"`
-	Dependencies       []dependency `json:"dependencies"`
-	Labels             []string     `json:"labels"`
-	DeferredUntil      string       `json:"deferred_until,omitempty"`
-	Comments           []string     `json:"comments,omitempty"`
-	CloseReason        string       `json:"close_reason,omitempty"`
-}
+type bead = Bead
 
 type failure struct {
 	Subcommand string `json:"subcommand"`

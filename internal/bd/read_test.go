@@ -166,3 +166,29 @@ func assertReadLogCount(t *testing.T, output []byte, want int) {
 		t.Errorf("log events = %d, want %d: %s", got, want, output)
 	}
 }
+func TestAllRecordReadsPreserveClosedMetadata(t *testing.T) {
+	fixture := string(readFixture(t, "snapshot-bead.json"))
+	client := newFake(t,
+		fakeEntry{Match: ArgsList(true), Stdout: fixture},
+		fakeEntry{Match: ArgsQuery("status=closed", true), Stdout: fixture},
+	)
+
+	for _, read := range []struct {
+		name string
+		call func() ([]Bead, error)
+	}{
+		{"list", func() ([]Bead, error) { return client.List(context.Background(), true) }},
+		{"query", func() ([]Bead, error) { return client.Query(context.Background(), "status=closed", true) }},
+	} {
+		t.Run(read.name, func(t *testing.T) {
+			beads, err := read.call()
+			if err != nil || len(beads) != 1 {
+				t.Fatalf("read() = %#v, %v", beads, err)
+			}
+			bead := beads[0]
+			if bead.Status != "closed" || bead.ClosedAt == "" || len(bead.Labels) != 2 || len(bead.Comments) != 2 || len(bead.Dependencies) != 2 {
+				t.Fatalf("bead = %#v", bead)
+			}
+		})
+	}
+}
