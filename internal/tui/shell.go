@@ -257,20 +257,20 @@ type ProgramOptions struct {
 
 // Program composes the root model, coordinator, transport inputs, shell, and Dashboard.
 type Program struct {
-	model      Model
-	shell      Shell
-	layout     DashboardLayout
+	model       Model
+	shell       Shell
+	layout      DashboardLayout
 	coordinator *RefreshCoordinator
-	now        func() time.Time
-	messages   chan tea.Msg
+	now         func() time.Time
+	messages    chan tea.Msg
 
-	mu                sync.Mutex
-	context           context.Context
-	cancel            context.CancelFunc
-	started           bool
-	generation        uint64
-	refresh           DashboardRefreshState
-	refreshError      string
+	mu           sync.Mutex
+	context      context.Context
+	cancel       context.CancelFunc
+	started      bool
+	generation   uint64
+	refresh      DashboardRefreshState
+	refreshError string
 }
 
 // NewProgram constructs an inert composed runtime. Init or Run starts I/O.

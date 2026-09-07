@@ -129,8 +129,8 @@ func programSnapshot(generation, cursor uint64) transport.Snapshot {
 	return transport.Snapshot{
 		ModelVersion: wire.Schema, Generation: generation, Cursor: cursor, Fresh: true,
 		Runtime: transport.Status{Running: true}, Repositories: []transport.Repository{{Name: "magicite"}},
-		Seats: []transport.Seat{{Name: "ifrit", Role: "implementer", Busy: true, Task: "magicite-nbr.6", Repo: "magicite"}},
-		Sessions: []transport.Session{{Handle: "ifrit", Phase: "run", Backend: "kiro", Model: "terra", UptimeSeconds: 60}},
+		Seats:        []transport.Seat{{Name: "ifrit", Role: "implementer", Busy: true, Task: "magicite-nbr.6", Repo: "magicite"}},
+		Sessions:     []transport.Session{{Handle: "ifrit", Phase: "run", Backend: "kiro", Model: "terra", UptimeSeconds: 60}},
 		StatusCounts: []transport.StatusCount{{Status: "open", Count: 1}},
 	}
 }
