@@ -54,7 +54,7 @@ func TestRefreshCoordinatorRepairsStreamEOFAndCancelsTimers(t *testing.T) {
 	results := make(chan RefreshResult, 4)
 	notices := make(chan RefreshNotice, 4)
 	coordinator := NewRefreshCoordinator(api, stream, RefreshOptions{
-		Cadence: -1,
+		Cadence:  -1,
 		NewTimer: timers.New,
 		ResultSink: func(result RefreshResult) {
 			results <- result

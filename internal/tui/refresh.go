@@ -75,8 +75,8 @@ type RefreshOptions struct {
 // RefreshCoordinator serializes daemon snapshots and owns one event stream.
 // It deliberately retains no snapshot or Bubble Tea state.
 type RefreshCoordinator struct {
-	api    transport.DaemonAPI
-	stream transport.EventStream
+	api     transport.DaemonAPI
+	stream  transport.EventStream
 	options RefreshOptions
 
 	mu           sync.Mutex
