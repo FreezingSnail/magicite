@@ -49,17 +49,17 @@ type ColdEvent struct {
 // composition. Its collections preserve daemon order and never require map
 // traversal.
 type ModelState struct {
-	Snapshot        transport.Snapshot
-	HasSnapshot     bool
-	Freshness       SnapshotFreshness
-	Connection      ConnectionState
-	Generation      uint64
-	Cursor          uint64
-	Selection       Selection
-	Events          []ColdEvent
-	Notices         []transport.StreamNotice
-	ChangedAt       time.Time
-	SchemaMismatch  bool
+	Snapshot       transport.Snapshot
+	HasSnapshot    bool
+	Freshness      SnapshotFreshness
+	Connection     ConnectionState
+	Generation     uint64
+	Cursor         uint64
+	Selection      Selection
+	Events         []ColdEvent
+	Notices        []transport.StreamNotice
+	ChangedAt      time.Time
+	SchemaMismatch bool
 }
 
 func initialModelState() ModelState {
