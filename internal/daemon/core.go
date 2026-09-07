@@ -37,6 +37,16 @@ type DepsError struct{ Field string }
 
 func (e *DepsError) Error() string { return fmt.Sprintf("daemon: %s is required", e.Field) }
 
+const (
+	snapshotModelVersion = 1
+	snapshotTTL          = time.Second
+	snapshotFanout       = 4
+)
+
+type coreSnapshotRaw struct {
+	Beads []bd.Bead
+}
+
 type core struct {
 	config     config.Config
 	log        logging.Logger
@@ -46,6 +56,7 @@ type core struct {
 	gate       dispatch.Gate
 	bus        *server.Bus
 	version    string
+	snapshots  *snapshotCoordinator[coreSnapshotRaw]
 
 	mu      sync.RWMutex
 	running bool
@@ -67,7 +78,10 @@ func NewCore(d Deps) (server.Core, error) {
 			return nil, &DepsError{Field: dependency.name}
 		}
 	}
-	return &core{config: d.Config, log: d.Log, dispatcher: d.Dispatcher, beads: d.Beads, repos: d.Repos, gate: d.Gate, bus: d.Bus, version: d.Version}, nil
+	core := &core{config: d.Config, log: d.Log, dispatcher: d.Dispatcher, beads: d.Beads, repos: d.Repos, gate: d.Gate, bus: d.Bus, version: d.Version}
+	cache := newSnapshotCache(snapshotTTL, time.Now, cloneCoreSnapshotState)
+	core.snapshots = newSnapshotCoordinator(cache, newSnapshotRefresher(snapshotFanout, core.snapshotRead))
+	return core, nil
 }
 
 func nilValue(value any) bool {
@@ -98,6 +112,101 @@ func (c *core) Status(ctx context.Context) (wire.StatusResult, error) {
 		result.Sessions = append(result.Sessions, wire.SessionResult{Handle: session.Handle, Repo: session.Repo.Name, Task: session.Task, Role: string(session.Role), Seat: session.Seat, Backend: session.Backend, Model: session.Model, Status: string(session.Status), Phase: session.Phase, UptimeSeconds: uptime})
 	}
 	return result, nil
+}
+
+// Snapshot returns the complete daemon-owned fleet model. Repository reads are
+// coalesced and retained by the coordinator; composing the returned raw state
+// performs no further repository operations.
+func (c *core) Snapshot(ctx context.Context) (wire.SnapshotResult, error) {
+	repositories := c.repos.List(ctx)
+	state, err := c.snapshots.Snapshot(ctx, repositories)
+	if err != nil {
+		return wire.SnapshotResult{}, classify(err)
+	}
+
+	runtime, err := c.Status(ctx)
+	if err != nil {
+		return wire.SnapshotResult{}, err
+	}
+	seats, err := c.Seats(ctx)
+	if err != nil {
+		return wire.SnapshotResult{}, err
+	}
+	result := wire.SnapshotResult{
+		ModelVersion:     snapshotModelVersion,
+		Generation:       state.Generation,
+		CapturedAt:       time.Now().UTC(),
+		Cursor:           c.bus.Last(),
+		Fresh:            state.Fresh,
+		Stale:            state.Stale,
+		Runtime:          runtime,
+		Repositories:     snapshotRepositories(repositories),
+		Seats:            seats,
+		Sessions:         append([]wire.SessionResult{}, runtime.Sessions...),
+		Beads:            make([]wire.BeadResult, 0),
+		StatusCounts:     make([]wire.StatusCount, 0),
+		RepositoryErrors: make([]wire.RepositoryError, 0, len(state.Errors)),
+	}
+	counts := make(map[string]int)
+	for _, record := range state.Records {
+		for _, bead := range record.Value.Beads {
+			result.Beads = append(result.Beads, beadView(record.Repo, bead, workflowFacts{}))
+			counts[bead.Status]++
+		}
+	}
+	for status, count := range counts {
+		result.StatusCounts = append(result.StatusCounts, wire.StatusCount{Status: status, Count: count})
+	}
+	for _, repositoryError := range state.Errors {
+		result.RepositoryErrors = append(result.RepositoryErrors, wire.RepositoryError{Repository: repositoryError.Repo.Name, Error: repositoryError.Err.Error()})
+	}
+	return result, nil
+}
+
+func (c *core) snapshotRead(ctx context.Context, repository repo.Repo) (coreSnapshotRaw, error) {
+	reader, ok := c.beads.(interface {
+		Query(context.Context, repo.Repo, string) ([]bd.Bead, error)
+	})
+	if !ok {
+		return coreSnapshotRaw{}, fmt.Errorf("%w: snapshot query is unavailable", server.ErrUnavailable)
+	}
+	beads, err := reader.Query(ctx, repository, "")
+	if err != nil {
+		return coreSnapshotRaw{}, err
+	}
+	return coreSnapshotRaw{Beads: cloneSnapshotBeads(beads)}, nil
+}
+
+func cloneCoreSnapshotState(state snapshotState[coreSnapshotRaw]) snapshotState[coreSnapshotRaw] {
+	clone := snapshotState[coreSnapshotRaw]{
+		Records:    make([]snapshotRecord[coreSnapshotRaw], len(state.Records)),
+		Errors:     append([]snapshotRepositoryError{}, state.Errors...),
+		Generation: state.Generation,
+		Fresh:      state.Fresh,
+		Stale:      state.Stale,
+	}
+	for index, record := range state.Records {
+		clone.Records[index] = snapshotRecord[coreSnapshotRaw]{Repo: record.Repo, Value: coreSnapshotRaw{Beads: cloneSnapshotBeads(record.Value.Beads)}}
+	}
+	return clone
+}
+
+func cloneSnapshotBeads(beads []bd.Bead) []bd.Bead {
+	clone := append([]bd.Bead{}, beads...)
+	for index := range clone {
+		clone[index].Labels = append([]string{}, clone[index].Labels...)
+		clone[index].Comments = append([]string{}, clone[index].Comments...)
+		clone[index].Dependencies = append([]bd.Dependency{}, clone[index].Dependencies...)
+	}
+	return clone
+}
+
+func snapshotRepositories(repositories []repo.Repo) []wire.RepoResult {
+	result := make([]wire.RepoResult, 0, len(repositories))
+	for _, repository := range repositories {
+		result = append(result, wire.RepoResult{Name: repository.Name, Path: repository.Root, Prefix: repository.Prefix, Branch: repository.Branch})
+	}
+	return result
 }
 
 func (c *core) Seats(ctx context.Context) ([]wire.SeatResult, error) {
@@ -219,7 +328,9 @@ func (c *core) Dispatch(ctx context.Context, p wire.DispatchParams) (wire.Dispat
 			}
 		}
 	}
-	return wire.DispatchResult{Handle: handle, Repo: repository.Name, Task: p.Task, Role: p.Role, Seat: seat}, nil
+	result := wire.DispatchResult{Handle: handle, Repo: repository.Name, Task: p.Task, Role: p.Role, Seat: seat}
+	c.invalidateSnapshot()
+	return result, nil
 }
 
 func (c *core) Start(ctx context.Context) (wire.StatusResult, error) {
@@ -229,6 +340,7 @@ func (c *core) Start(ctx context.Context) (wire.StatusResult, error) {
 	c.mu.Lock()
 	c.running = true
 	c.mu.Unlock()
+	c.invalidateSnapshot()
 	return c.Status(ctx)
 }
 
@@ -241,6 +353,7 @@ func (c *core) Stop(ctx context.Context, p wire.StopParams) (wire.StopResult, er
 	if p.Hard {
 		mode = "hard"
 	}
+	c.invalidateSnapshot()
 	return wire.StopResult{Mode: mode, Sessions: len(c.dispatcher.Sessions()), Draining: c.dispatcher.Draining()}, nil
 }
 
@@ -260,7 +373,15 @@ func (c *core) Review(ctx context.Context, p wire.ReviewParams) (wire.ReviewResu
 	if handle == "" {
 		return wire.ReviewResult{}, fmt.Errorf("%w: review %s", server.ErrUnavailable, p.Epic)
 	}
-	return wire.ReviewResult{Epic: epic, Repo: repository.Name, Handle: handle, Held: true}, nil
+	result := wire.ReviewResult{Epic: epic, Repo: repository.Name, Handle: handle, Held: true}
+	c.invalidateSnapshot()
+	return result, nil
+}
+
+func (c *core) invalidateSnapshot() {
+	if c.snapshots != nil {
+		c.snapshots.cache.Invalidate()
+	}
 }
 
 func (c *core) taskRepos(ctx context.Context, name string) ([]repo.Repo, error) {

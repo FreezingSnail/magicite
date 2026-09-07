@@ -18,6 +18,8 @@ type fakeCore struct {
 
 	status      wire.StatusResult
 	statusErr   error
+	snapshot    wire.SnapshotResult
+	snapshotErr error
 	seats       []wire.SeatResult
 	seatsErr    error
 	tasks       []wire.TaskResult
@@ -37,6 +39,11 @@ type fakeCore struct {
 func (f *fakeCore) Status(context.Context) (wire.StatusResult, error) {
 	f.record("Status", nil)
 	return f.status, f.statusErr
+}
+
+func (f *fakeCore) Snapshot(context.Context) (wire.SnapshotResult, error) {
+	f.record("Snapshot", nil)
+	return f.snapshot, f.snapshotErr
 }
 
 func (f *fakeCore) Seats(context.Context) ([]wire.SeatResult, error) {

@@ -131,6 +131,48 @@ func TestAssembleServesLifecycleOverProcessDoubles(t *testing.T) {
 	}
 }
 
+func TestAssembleServesSnapshotThroughClient(t *testing.T) {
+	env := daemonEnv(t)
+	record := testenv.NewRepo(t, env, "project")
+	if err := os.MkdirAll(filepath.Join(record.Root, ".beads"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	beads := testenv.NewBD(t, env)
+	applyFixtureEnv(t, env)
+	beads.Seed(
+		testenv.Bead{ID: "closed-1", Title: "closed", Status: "closed", Priority: 1, IssueType: "task", Labels: []string{"staged"}},
+		testenv.Bead{ID: "open-1", Title: "open", Status: "open", Priority: 2, IssueType: "task", Labels: []string{}},
+	)
+	cfgPath := writeDaemonConfig(t, env, record.Root, "workspaces")
+	assembly, err := Assemble(context.Background(), cfgPath)
+	if err != nil {
+		t.Fatalf("Assemble() error = %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	serveDone := make(chan error, 1)
+	go func() {
+		serveDone <- server.Serve(ctx, server.Deps{Router: assembly.Router, Bus: assembly.Bus, Socket: assembly.Socket})
+	}()
+	api := client.New(client.Options{Socket: assembly.Socket, Timeout: 5 * time.Second})
+	defer stopDaemon(t, cancel, serveDone, assembly.Socket)
+	waitClient(t, serveDone, api, "status", nil, &wire.StatusResult{})
+
+	result, err := api.Snapshot(context.Background())
+	if err != nil {
+		t.Fatalf("Client.Snapshot() error = %v", err)
+	}
+	if result.ModelVersion != snapshotModelVersion || result.Generation != 1 || !result.Fresh || result.Stale || result.Cursor == 0 || result.Runtime.Repos != 1 {
+		t.Fatalf("Client.Snapshot() metadata = %#v", result)
+	}
+	if len(result.Repositories) != 1 || len(result.Seats) != 4 || len(result.Beads) != 2 || len(result.StatusCounts) != 2 {
+		t.Fatalf("Client.Snapshot() fleet = %#v", result)
+	}
+	if result.Beads[0].ID != "closed-1" || !result.Beads[0].Staged || result.Beads[1].ID != "open-1" {
+		t.Fatalf("Client.Snapshot() beads = %#v", result.Beads)
+	}
+}
+
 type reviewLifecycleCase struct {
 	name, scenario, verdict, condition string
 }

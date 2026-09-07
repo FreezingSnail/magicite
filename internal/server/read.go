@@ -26,7 +26,7 @@ func (e *ReadRegistrationError) Error() string {
 	}
 }
 
-// RegisterRead adds status, seats, tasks, and repos handlers to r using c.
+// RegisterRead adds snapshot, status, seats, tasks, and repos handlers to r using c.
 func RegisterRead(r *Router, c Core) error {
 	if r == nil {
 		return &ReadRegistrationError{Reason: "nil router"}
@@ -39,6 +39,7 @@ func RegisterRead(r *Router, c Core) error {
 		name string
 		h    Handler
 	}{
+		{name: "snapshot", h: snapshotRead(c)},
 		{name: "status", h: statusRead(c)},
 		{name: "seats", h: seatsRead(c)},
 		{name: "tasks", h: tasksRead(c)},
@@ -69,6 +70,19 @@ func statusRead(c Core) Handler {
 			return left.Handle < right.Handle
 		})
 		return result, nil
+	}
+}
+
+func snapshotRead(c Core) Handler {
+	return func(ctx context.Context, params json.RawMessage) (any, error) {
+		if err := decodeNoReadParams("snapshot", params); err != nil {
+			return nil, err
+		}
+		result, err := c.Snapshot(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return normalizeSnapshot(result), nil
 	}
 }
 

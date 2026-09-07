@@ -35,15 +35,15 @@ func TestRegisterRead(t *testing.T) {
 	if err := RegisterRead(router, core); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := router.Commands(), []string{"repos", "seats", "status", "tasks"}; !reflect.DeepEqual(got, want) {
+	if got, want := router.Commands(), []string{"repos", "seats", "snapshot", "status", "tasks"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("Commands() = %v, want %v", got, want)
 	}
 	if err := RegisterRead(router, core); err == nil {
 		t.Fatal("second RegisterRead() error = nil")
 	} else {
 		var registration *RegistrationError
-		if !errors.As(err, &registration) || registration.Name != "status" {
-			t.Fatalf("second RegisterRead() error = %T %v, want status RegistrationError", err, err)
+		if !errors.As(err, &registration) || registration.Name != "snapshot" {
+			t.Fatalf("second RegisterRead() error = %T %v, want snapshot RegistrationError", err, err)
 		}
 	}
 }
@@ -55,7 +55,7 @@ func TestReadNoParams(t *testing.T) {
 		repos:  []wire.RepoResult{},
 	}
 	router := readRouter(t, core)
-	for _, command := range []string{"status", "seats", "repos"} {
+	for _, command := range []string{"snapshot", "status", "seats", "repos"} {
 		t.Run(command, func(t *testing.T) {
 			for _, params := range []json.RawMessage{nil, json.RawMessage(`null`), json.RawMessage(`{}`)} {
 				response := handleRead(router, command, params)
@@ -114,6 +114,26 @@ func TestReadOrdering(t *testing.T) {
 	decodeReadResult(t, response, &repos)
 	if got, want := []string{repos[0].Name, repos[1].Name}, []string{"a", "z"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("repos = %v, want %v", got, want)
+	}
+}
+
+func TestSnapshotReadNormalizesCoreResult(t *testing.T) {
+	core := &fakeCore{snapshot: wire.SnapshotResult{
+		Repositories: []wire.RepoResult{{Name: "z"}, {Name: "a"}},
+		Beads:        []wire.BeadResult{{ID: "z", Repo: "z", Priority: 1, Labels: []string{}, Dependencies: []wire.DependencyResult{}}, {ID: "a", Repo: "a", Priority: 1, Labels: []string{}, Dependencies: []wire.DependencyResult{}}},
+	}}
+	response := handleRead(readRouter(t, core), "snapshot", nil)
+	var result wire.SnapshotResult
+	decodeReadResult(t, response, &result)
+	if got := []string{result.Repositories[0].Name, result.Repositories[1].Name}; !reflect.DeepEqual(got, []string{"a", "z"}) {
+		t.Fatalf("snapshot repositories = %#v", result.Repositories)
+	}
+	if got := []string{result.Beads[0].ID, result.Beads[1].ID}; !reflect.DeepEqual(got, []string{"a", "z"}) {
+		t.Fatalf("snapshot beads = %#v", result.Beads)
+	}
+	calls := core.Calls()
+	if len(calls) != 1 || calls[0].Method != "Snapshot" || calls[0].Params != nil {
+		t.Fatalf("snapshot calls = %#v", calls)
 	}
 }
 
