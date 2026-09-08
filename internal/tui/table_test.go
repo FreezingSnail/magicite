@@ -25,8 +25,8 @@ func TestTableLayoutWeightsMinimumsAndDropping(t *testing.T) {
 
 func TestTableRenderScrollsAndUsesVisibleMarker(t *testing.T) {
 	table := Table{
-		Columns: []Column{{Title: "Name", Min: 4, Weight: 1}, {Title: "N", Width: 3, Right: true}},
-		Rows:    [][]string{{"alpha", "1"}, {"beta", "20"}, {"gamma", "300"}},
+		Columns:  []Column{{Title: "Name", Min: 4, Weight: 1}, {Title: "N", Width: 3, Right: true}},
+		Rows:     [][]string{{"alpha", "1"}, {"beta", "20"}, {"gamma", "300"}},
 		Selected: 2,
 	}
 	want := "  Name      N\n  beta     20\n> gamma   300"
