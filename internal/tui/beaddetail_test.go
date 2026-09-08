@@ -27,7 +27,7 @@ func TestBeadDetailRendersSanitizedSnapshotSections(t *testing.T) {
 		CreatedAt: &created, UpdatedAt: &created, StartedAt: &created, ClosedAt: &created, DeferredUntil: &created, CreatedBy: &creator, CloseReason: &closeReason,
 		DependencyCount: 1, DependentCount: 2, CommentCount: 3,
 		Dependencies: []wire.DependencyResult{{ID: "blocker", Status: "open", Title: "blocks this", Type: "blocks"}, {ID: "child", Status: "closed", Type: "parent-child"}},
-		Dispatch: wire.Eligibility{Reason: &reason}, Review: wire.Eligibility{Eligible: true},
+		Dispatch:     wire.Eligibility{Reason: &reason}, Review: wire.Eligibility{Eligible: true},
 	})
 	output := detail.content
 	for _, want := range []string{
