@@ -15,6 +15,7 @@ import (
 	"github.com/FreezingSnail/magicite/internal/config"
 	"github.com/FreezingSnail/magicite/internal/dispatch"
 	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/metrics"
 	"github.com/FreezingSnail/magicite/internal/repo"
 	"github.com/FreezingSnail/magicite/internal/server"
 	"github.com/FreezingSnail/magicite/internal/wire"
@@ -22,14 +23,16 @@ import (
 
 // Deps supplies the daemon dependencies exposed through server.Core.
 type Deps struct {
-	Config     config.Config
-	Log        logging.Logger
-	Dispatcher *dispatch.Dispatcher
-	Beads      dispatch.Beads
-	Repos      dispatch.Repos
-	Gate       dispatch.Gate
-	Bus        *server.Bus
-	Version    string
+	Config       config.Config
+	Log          logging.Logger
+	Dispatcher   *dispatch.Dispatcher
+	Beads        dispatch.Beads
+	Repos        dispatch.Repos
+	Gate         dispatch.Gate
+	Bus          *server.Bus
+	Metrics      *metrics.Registry
+	QueueSampler *QueueSampler
+	Version      string
 }
 
 // DepsError identifies an incomplete daemon Core dependency set.
@@ -55,6 +58,8 @@ type core struct {
 	repos      dispatch.Repos
 	gate       dispatch.Gate
 	bus        *server.Bus
+	metrics    *metrics.Registry
+	queue      *QueueSampler
 	version    string
 	snapshots  *snapshotCoordinator[coreSnapshotRaw]
 
@@ -73,12 +78,14 @@ func NewCore(d Deps) (server.Core, error) {
 		{"Repos", d.Repos},
 		{"Gate", d.Gate},
 		{"Bus", d.Bus},
+		{"Metrics", d.Metrics},
+		{"QueueSampler", d.QueueSampler},
 	} {
 		if nilValue(dependency.value) {
 			return nil, &DepsError{Field: dependency.name}
 		}
 	}
-	core := &core{config: d.Config, log: d.Log, dispatcher: d.Dispatcher, beads: d.Beads, repos: d.Repos, gate: d.Gate, bus: d.Bus, version: d.Version}
+	core := &core{config: d.Config, log: d.Log, dispatcher: d.Dispatcher, beads: d.Beads, repos: d.Repos, gate: d.Gate, bus: d.Bus, metrics: d.Metrics, queue: d.QueueSampler, version: d.Version}
 	cache := newSnapshotCache(snapshotTTL, time.Now, cloneCoreSnapshotState)
 	core.snapshots = newSnapshotCoordinator(cache, newSnapshotRefresher(snapshotFanout, core.snapshotRead))
 	return core, nil
@@ -112,6 +119,49 @@ func (c *core) Status(ctx context.Context) (wire.StatusResult, error) {
 		result.Sessions = append(result.Sessions, wire.SessionResult{Handle: session.Handle, Repo: session.Repo.Name, Task: session.Task, Role: string(session.Role), Seat: session.Seat, Backend: session.Backend, Model: session.Model, Status: string(session.Status), Phase: session.Phase, UptimeSeconds: uptime})
 	}
 	return result, nil
+}
+
+// Metrics samples ready queues and combines process, queue, and bus telemetry.
+func (c *core) Metrics(ctx context.Context) (wire.MetricsResult, error) {
+	sample := c.queue.Sample(ctx)
+	depths := make(map[string]int, len(sample.Repositories))
+	for _, repository := range sample.Repositories {
+		depths[repository.Repo.Name] = repository.Ready
+	}
+	c.metrics.SetQueue(depths, sample.CapturedAt)
+	return metricsView(c.metrics.Snapshot(), c.bus.Metrics()), nil
+}
+
+func metricsView(snapshot metrics.Snapshot, bus server.BusMetrics) wire.MetricsResult {
+	result := wire.MetricsResult{
+		StartedAt:     snapshot.StartedAt,
+		UptimeSeconds: int64(snapshot.Uptime / time.Second),
+		Lifecycle:     make([]wire.MetricsCount, 0, 9),
+		Land:          make([]wire.MetricsCount, 0, 4),
+		Sessions: wire.SessionGauges{
+			Active: snapshot.Sessions.Active, Peak: snapshot.Sessions.Peak,
+			Completed: snapshot.Sessions.Completed, Failed: snapshot.Sessions.Failed,
+		},
+		Roles:          make([]wire.RoleDuration, 0, 5),
+		Queue:          make([]wire.RepoQueueDepth, 0, len(snapshot.Queue)),
+		QueueTotal:     snapshot.QueueTotal,
+		QueueSampledAt: snapshot.QueueSampledAt,
+		Bus:            wire.BusMetrics{Published: bus.Published, Dropped: bus.Dropped},
+	}
+	for _, key := range []string{metrics.LifecyclePickup, metrics.LifecycleComplete, metrics.LifecycleLand, metrics.LifecycleClose, metrics.LifecycleReview, metrics.LifecycleVerdict, metrics.LifecycleRecovery, metrics.LifecycleWarn, metrics.LifecycleError} {
+		result.Lifecycle = append(result.Lifecycle, wire.MetricsCount{Key: key, Count: snapshot.Lifecycle[key]})
+	}
+	for _, key := range []string{metrics.LandOK, metrics.LandConflict, metrics.LandGateFailed, metrics.LandFailed} {
+		result.Land = append(result.Land, wire.MetricsCount{Key: key, Count: snapshot.Land[key]})
+	}
+	for _, role := range []string{metrics.RoleConcierge, metrics.RoleDesigner, metrics.RoleImplementer, metrics.RoleReviewer, metrics.RoleRepairer} {
+		total := snapshot.Roles[role]
+		result.Roles = append(result.Roles, wire.RoleDuration{Role: role, Sessions: total.Sessions, TotalSeconds: int64(total.Duration / time.Second)})
+	}
+	for _, queue := range snapshot.Queue {
+		result.Queue = append(result.Queue, wire.RepoQueueDepth{Repo: queue.Repository, Depth: queue.Depth})
+	}
+	return result
 }
 
 // Snapshot returns the complete daemon-owned fleet model. Repository reads are

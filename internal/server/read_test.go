@@ -35,7 +35,7 @@ func TestRegisterRead(t *testing.T) {
 	if err := RegisterRead(router, core); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := router.Commands(), []string{"repos", "seats", "snapshot", "status", "tasks"}; !reflect.DeepEqual(got, want) {
+	if got, want := router.Commands(), []string{"metrics", "repos", "seats", "snapshot", "status", "tasks"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("Commands() = %v, want %v", got, want)
 	}
 	if err := RegisterRead(router, core); err == nil {
@@ -55,7 +55,7 @@ func TestReadNoParams(t *testing.T) {
 		repos:  []wire.RepoResult{},
 	}
 	router := readRouter(t, core)
-	for _, command := range []string{"snapshot", "status", "seats", "repos"} {
+	for _, command := range []string{"snapshot", "metrics", "status", "seats", "repos"} {
 		t.Run(command, func(t *testing.T) {
 			for _, params := range []json.RawMessage{nil, json.RawMessage(`null`), json.RawMessage(`{}`)} {
 				response := handleRead(router, command, params)
@@ -201,5 +201,30 @@ func decodeReadResult(t *testing.T, response wire.Response, target any) {
 	}
 	if err := json.Unmarshal(response.Result, target); err != nil {
 		t.Fatalf("json.Unmarshal(%s): %v", response.Result, err)
+	}
+}
+
+func TestMetricsReadNormalizesResultAndClassifiesErrors(t *testing.T) {
+	core := &fakeCore{metrics: wire.MetricsResult{
+		Lifecycle: []wire.MetricsCount{{Key: "pickup", Count: 1}},
+		Land:      []wire.MetricsCount{},
+		Roles:     []wire.RoleDuration{{Role: "reviewer"}, {Role: "designer"}},
+		Queue:     []wire.RepoQueueDepth{{Repo: "z"}, {Repo: "a"}},
+	}}
+	response := handleRead(readRouter(t, core), "metrics", nil)
+	var result wire.MetricsResult
+	decodeReadResult(t, response, &result)
+	if result.Lifecycle == nil || result.Land == nil || result.Roles == nil || result.Queue == nil || result.Roles[0].Role != "reviewer" || result.Queue[0].Repo != "a" {
+		t.Fatalf("metrics result = %#v", result)
+	}
+	calls := core.Calls()
+	if len(calls) != 1 || calls[0].Method != "Metrics" || calls[0].Params != nil {
+		t.Fatalf("metrics calls = %#v", calls)
+	}
+
+	core.metricsErr = ErrUnavailable
+	response = handleRead(readRouter(t, core), "metrics", nil)
+	if response.Err == nil || response.Err.Code != wire.CodeUnavailable || response.Err.Message != ErrUnavailable.Error() {
+		t.Fatalf("metrics unavailable = %#v", response)
 	}
 }

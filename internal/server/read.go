@@ -26,7 +26,7 @@ func (e *ReadRegistrationError) Error() string {
 	}
 }
 
-// RegisterRead adds snapshot, status, seats, tasks, and repos handlers to r using c.
+// RegisterRead adds snapshot, metrics, status, seats, tasks, and repos handlers to r using c.
 func RegisterRead(r *Router, c Core) error {
 	if r == nil {
 		return &ReadRegistrationError{Reason: "nil router"}
@@ -40,6 +40,7 @@ func RegisterRead(r *Router, c Core) error {
 		h    Handler
 	}{
 		{name: "snapshot", h: snapshotRead(c)},
+		{name: "metrics", h: metricsRead(c)},
 		{name: "status", h: statusRead(c)},
 		{name: "seats", h: seatsRead(c)},
 		{name: "tasks", h: tasksRead(c)},
@@ -71,6 +72,28 @@ func statusRead(c Core) Handler {
 		})
 		return result, nil
 	}
+}
+
+func metricsRead(c Core) Handler {
+	return func(ctx context.Context, params json.RawMessage) (any, error) {
+		if err := decodeNoReadParams("metrics", params); err != nil {
+			return nil, err
+		}
+		result, err := c.Metrics(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return normalizeMetrics(result), nil
+	}
+}
+
+func normalizeMetrics(result wire.MetricsResult) wire.MetricsResult {
+	result.Lifecycle = nonNil(append([]wire.MetricsCount{}, result.Lifecycle...))
+	result.Land = nonNil(append([]wire.MetricsCount{}, result.Land...))
+	result.Roles = nonNil(append([]wire.RoleDuration{}, result.Roles...))
+	result.Queue = nonNil(append([]wire.RepoQueueDepth{}, result.Queue...))
+	sort.Slice(result.Queue, func(i, j int) bool { return result.Queue[i].Repo < result.Queue[j].Repo })
+	return result
 }
 
 func snapshotRead(c Core) Handler {

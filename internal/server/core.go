@@ -21,6 +21,7 @@ var (
 // Core is the daemon capability boundary used by command handlers.
 type Core interface {
 	Snapshot(ctx context.Context) (wire.SnapshotResult, error)
+	Metrics(ctx context.Context) (wire.MetricsResult, error)
 	Status(ctx context.Context) (wire.StatusResult, error)
 	Seats(ctx context.Context) ([]wire.SeatResult, error)
 	Tasks(ctx context.Context, p wire.TasksParams) ([]wire.TaskResult, error)

@@ -9,6 +9,7 @@ import (
 	"github.com/FreezingSnail/magicite/internal/config"
 	"github.com/FreezingSnail/magicite/internal/decomp"
 	"github.com/FreezingSnail/magicite/internal/dispatch"
+	"github.com/FreezingSnail/magicite/internal/metrics"
 	"github.com/FreezingSnail/magicite/internal/repo"
 	"github.com/FreezingSnail/magicite/internal/server"
 	"github.com/FreezingSnail/magicite/internal/wire"
@@ -26,6 +27,8 @@ func TestNewCoreRejectsNilDependencies(t *testing.T) {
 		{"repos", func(d *Deps) { d.Repos = nil }, "Repos"},
 		{"gate", func(d *Deps) { d.Gate = nil }, "Gate"},
 		{"bus", func(d *Deps) { d.Bus = nil }, "Bus"},
+		{"metrics", func(d *Deps) { d.Metrics = nil }, "Metrics"},
+		{"queue sampler", func(d *Deps) { d.QueueSampler = nil }, "QueueSampler"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			deps := base
@@ -117,7 +120,7 @@ func TestCoreSnapshotComposesCachedFleetState(t *testing.T) {
 
 func coreDeps(t *testing.T) Deps {
 	t.Helper()
-	return Deps{Config: config.Default(), Dispatcher: &dispatch.Dispatcher{}, Beads: testBeads{}, Repos: testRepos{}, Gate: testGate{}, Bus: server.NewBus(1), Version: "test"}
+	return Deps{Config: config.Default(), Dispatcher: &dispatch.Dispatcher{}, Beads: testBeads{}, Repos: testRepos{}, Gate: testGate{}, Bus: server.NewBus(1), Metrics: metrics.NewRegistry(), QueueSampler: NewQueueSampler(testRepos{}, testBeads{}), Version: "test"}
 }
 
 func testRepo(t *testing.T) repo.Repo {

@@ -18,6 +18,7 @@ import (
 	"github.com/FreezingSnail/magicite/internal/gate"
 	"github.com/FreezingSnail/magicite/internal/land"
 	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/metrics"
 	"github.com/FreezingSnail/magicite/internal/repo"
 	"github.com/FreezingSnail/magicite/internal/server"
 	"github.com/FreezingSnail/magicite/internal/stamp"
@@ -69,6 +70,7 @@ func Assemble(ctx context.Context, cfgPath string) (*Assembly, error) {
 		return nil, fmt.Errorf("daemon: build agent runtime: %w", err)
 	}
 	store := state.Default()
+	registry := metrics.NewRegistry()
 	qualityGate, err := gate.New(gate.Deps{
 		Beads:  gateBeadsAdapter{beads: beads},
 		Git:    gateGit{runner: gitRunner},
@@ -79,11 +81,11 @@ func Assemble(ctx context.Context, cfgPath string) (*Assembly, error) {
 	if err != nil {
 		return nil, fmt.Errorf("daemon: build gate: %w", err)
 	}
-	dispatcher, err := dispatch.New(dispatch.Deps{Beads: beads, Workspaces: dispatchWorkspace{manager: workspaces}, Lander: landAdapter{pipeline: lander}, Runner: runnerAdapter{runtime: runtime}, Repos: repos, Gate: qualityGate, Clock: wallClock{}, Config: cfg, Logger: func(level logging.Level, kind string, fields map[string]any) { log.Event(level, kind, fields) }})
+	dispatcher, err := dispatch.New(dispatch.Deps{Beads: beads, Workspaces: dispatchWorkspace{manager: workspaces}, Lander: landAdapter{pipeline: lander}, Runner: runnerAdapter{runtime: runtime}, Repos: repos, Gate: qualityGate, Clock: wallClock{}, Metrics: registry, Config: cfg, Logger: func(level logging.Level, kind string, fields map[string]any) { log.Event(level, kind, fields) }})
 	if err != nil {
 		return nil, fmt.Errorf("daemon: build dispatcher: %w", err)
 	}
-	core, err := NewCore(Deps{Config: cfg, Log: *log, Dispatcher: dispatcher, Beads: beads, Repos: repos, Gate: qualityGate, Bus: bus, Version: version.Info()})
+	core, err := NewCore(Deps{Config: cfg, Log: *log, Dispatcher: dispatcher, Beads: beads, Repos: repos, Gate: qualityGate, Bus: bus, Metrics: registry, QueueSampler: NewQueueSampler(repos, beads), Version: version.Info()})
 	if err != nil {
 		return nil, fmt.Errorf("daemon: build core: %w", err)
 	}
