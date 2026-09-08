@@ -3,8 +3,12 @@ package tui
 import (
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/FreezingSnail/magicite/internal/tui/transport"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 func TestShellKeysMatchHintsAndResize(t *testing.T) {
@@ -63,5 +67,18 @@ func TestDashboardLayoutNoColorAndDeterministicSizing(t *testing.T) {
 	}
 	if first == second {
 		t.Fatal("resize did not affect render")
+	}
+}
+
+func TestDashboardLayoutComposesMetricsPane(t *testing.T) {
+	layout := NewDashboardLayout(80, 48, true)
+	state := NewModel().State()
+	state.Metrics = MetricsState{HasLastGood: true, LastGood: transport.Metrics{Lifecycle: []wire.MetricsCount{}, Land: []wire.MetricsCount{}, Roles: []wire.RoleDuration{}, Queue: []wire.RepoQueueDepth{}}}
+	if view := layout.Render(state, time.Time{}, DashboardRefreshIdle, ""); !strings.Contains(view, "Metrics\n") || !strings.Contains(view, "queue: total 0; none") {
+		t.Fatalf("Dashboard metrics missing: %q", view)
+	}
+	state.Metrics = MetricsState{Unsupported: true}
+	if view := layout.Render(state, time.Time{}, DashboardRefreshIdle, ""); strings.Contains(view, "Metrics") {
+		t.Fatalf("unsupported metrics rendered: %q", view)
 	}
 }

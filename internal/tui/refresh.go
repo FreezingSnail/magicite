@@ -31,6 +31,8 @@ type RefreshResult struct {
 	Causes     []RefreshCause
 	Snapshot   transport.Snapshot
 	Err        error
+	Metrics    transport.Metrics
+	MetricsErr error
 }
 
 // RefreshNoticeKind identifies a stream annotation. Stream events and notices
@@ -184,16 +186,19 @@ func (c *RefreshCoordinator) refreshLoop(ctx context.Context) {
 			continue
 		}
 		var snapshot transport.Snapshot
-		var err error
+		var metrics transport.Metrics
+		var err, metricsErr error
 		if c.api == nil {
 			err = &transport.Error{Code: transport.ErrorUnavailable}
+			metricsErr = &transport.Error{Code: transport.ErrorUnavailable}
 		} else {
 			snapshot, err = c.api.Snapshot(ctx)
+			metrics, metricsErr = c.api.Metrics(ctx)
 		}
 		if err == nil {
 			c.advanceCursor(snapshot.Cursor)
 		}
-		c.sendResult(RefreshResult{Generation: generation, Causes: causes, Snapshot: snapshot, Err: err})
+		c.sendResult(RefreshResult{Generation: generation, Causes: causes, Snapshot: snapshot, Err: err, Metrics: metrics, MetricsErr: metricsErr})
 	}
 }
 

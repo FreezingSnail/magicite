@@ -26,7 +26,7 @@ func TestProgramComposesRepairAndSuppressesLateMessages(t *testing.T) {
 	first := awaitProgram(t, stream.subscriptions, "initial stream")
 	api.results <- programResult{snapshot: programSnapshot(2, 1)}
 	program = programUpdate(t, program, command())
-	if state := program.State(); state.Connection != ConnectionOnline || state.Generation != 2 {
+	if state := program.State(); state.Connection != ConnectionOnline || state.Generation != 2 || !state.Metrics.HasLastGood {
 		t.Fatalf("initial state = %#v", state)
 	}
 
@@ -90,6 +90,10 @@ func (api *programAPI) Snapshot(context.Context) (transport.Snapshot, error) {
 	api.calls <- struct{}{}
 	result := <-api.results
 	return result.snapshot, result.err
+}
+
+func (api *programAPI) Metrics(context.Context) (transport.Metrics, error) {
+	return transport.Metrics{}, nil
 }
 
 type programStream struct{ subscriptions chan *programSubscription }

@@ -131,3 +131,36 @@ func testSnapshot(generation, cursor uint64, fresh, stale bool) transport.Snapsh
 type modelClock struct{ now time.Time }
 
 func (clock *modelClock) Now() time.Time { return clock.now }
+
+func TestModelMetricsRetainsLastGoodAndScopesFailures(t *testing.T) {
+	clock := &modelClock{now: time.Unix(20, 0)}
+	model := NewModel(ModelOptions{Now: clock.Now})
+	if state := model.State().Metrics; !state.Loading || state.HasLastGood {
+		t.Fatalf("initial metrics = %#v", state)
+	}
+	metrics := transport.Metrics{Lifecycle: []wire.MetricsCount{{Key: "pickup", Count: 2}}, Land: []wire.MetricsCount{}, Roles: []wire.RoleDuration{}, Queue: []wire.RepoQueueDepth{}}
+	model = updatedModel(t, model, MetricsMsg{Metrics: metrics})
+	state := model.State().Metrics
+	if !state.HasLastGood || state.Loading || state.Stale || state.Unavailable || state.LastGood.Lifecycle[0].Count != 2 {
+		t.Fatalf("successful metrics = %#v", state)
+	}
+	state.LastGood.Lifecycle[0].Count = 99
+	if got := model.State().Metrics.LastGood.Lifecycle[0].Count; got != 2 {
+		t.Fatalf("State exposed metrics storage: %d", got)
+	}
+	model = updatedModel(t, model, MetricsMsg{Error: &transport.Error{Code: transport.ErrorUnavailable}})
+	state = model.State().Metrics
+	if !state.HasLastGood || !state.Stale || state.Unavailable || state.LastGood.Lifecycle[0].Count != 2 {
+		t.Fatalf("stale metrics = %#v", state)
+	}
+	model = updatedModel(t, model, MetricsMsg{Error: &transport.Error{Code: transport.ErrorUnsupported}})
+	state = model.State().Metrics
+	if !state.Unsupported || state.HasLastGood || state.Stale {
+		t.Fatalf("unsupported metrics = %#v", state)
+	}
+	model = NewModel(ModelOptions{Now: clock.Now})
+	model = updatedModel(t, model, MetricsMsg{Error: &transport.Error{Code: transport.ErrorUnavailable}})
+	if state := model.State().Metrics; !state.Unavailable || state.HasLastGood || state.Stale {
+		t.Fatalf("initial unavailable metrics = %#v", state)
+	}
+}

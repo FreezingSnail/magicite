@@ -32,7 +32,7 @@ func TestTUIComposesInheritedSocketClients(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = listener.Close(); _ = os.Remove(socket) })
-	requests := make(chan string, 2)
+	requests := make(chan string, 3)
 	serveDone := make(chan struct{})
 	go func() {
 		defer close(serveDone)
@@ -51,6 +51,9 @@ func TestTUIComposesInheritedSocketClients(t *testing.T) {
 				switch request.Command {
 				case "snapshot":
 					payload, _ := json.Marshal(wire.SnapshotResult{ModelVersion: wire.Schema, Generation: 1, Fresh: true, Runtime: wire.StatusResult{Running: true}})
+					_ = wire.NewEncoder(conn).Encode(wire.Response{Schema: wire.Schema, ID: request.ID, Result: payload})
+				case "metrics":
+					payload, _ := json.Marshal(wire.MetricsResult{Lifecycle: []wire.MetricsCount{}, Land: []wire.MetricsCount{}, Roles: []wire.RoleDuration{}, Queue: []wire.RepoQueueDepth{}})
 					_ = wire.NewEncoder(conn).Encode(wire.Response{Schema: wire.Schema, ID: request.ID, Result: payload})
 				case "subscribe":
 					<-serveDone
@@ -73,7 +76,7 @@ func TestTUIComposesInheritedSocketClients(t *testing.T) {
 		t.Fatalf("Run() = %d, stderr = %q", code, stderr.String())
 	}
 	seen := map[string]bool{}
-	for len(seen) < 2 {
+	for len(seen) < 3 {
 		select {
 		case command := <-requests:
 			seen[command] = true
@@ -81,7 +84,7 @@ func TestTUIComposesInheritedSocketClients(t *testing.T) {
 			t.Fatalf("requests = %#v", seen)
 		}
 	}
-	if !seen["snapshot"] || !seen["subscribe"] {
+	if !seen["snapshot"] || !seen["subscribe"] || !seen["metrics"] {
 		t.Fatalf("requests = %#v", seen)
 	}
 }

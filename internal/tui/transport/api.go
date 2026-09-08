@@ -52,9 +52,13 @@ type (
 	RepositoryError = wire.RepositoryError
 )
 
+// Metrics is one daemon-owned cumulative fleet counter snapshot.
+type Metrics = wire.MetricsResult
+
 // DaemonAPI supplies the read operations available to the TUI.
 type DaemonAPI interface {
 	Snapshot(context.Context) (Snapshot, error)
+	Metrics(context.Context) (Metrics, error)
 }
 
 // ControlIntent reserves a typed vocabulary for future daemon controls.
@@ -84,6 +88,7 @@ const (
 	ErrorUnavailable    ErrorCode = ErrorCode(wire.CodeUnavailable)
 	ErrorSchemaMismatch ErrorCode = ErrorCode(wire.CodeSchemaMismatch)
 	ErrorInternal       ErrorCode = ErrorCode(wire.CodeInternal)
+	ErrorUnsupported    ErrorCode = "unsupported"
 )
 
 // Error is a UI-safe daemon transport failure. It retains the daemon failure

@@ -8,19 +8,20 @@ import (
 	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
-// SnapshotClient is the qik client capability required by RPC.
-type SnapshotClient interface {
+// Client is the qik client capability required by RPC.
+type Client interface {
 	Snapshot(context.Context) (wire.SnapshotResult, error)
+	Metrics(context.Context) (wire.MetricsResult, error)
 }
 
-// RPC adapts qik snapshot calls to the UI daemon boundary.
-type RPC struct{ client SnapshotClient }
+// RPC adapts qik snapshot and metrics calls to the UI daemon boundary.
+type RPC struct{ client Client }
 
-// New constructs a UI transport adapter over a qik snapshot client.
-func New(client SnapshotClient) *RPC { return &RPC{client: client} }
+// New constructs a UI transport adapter over a qik client.
+func New(client Client) *RPC { return &RPC{client: client} }
 
-// NewRPC constructs a UI transport adapter over a qik snapshot client.
-func NewRPC(client SnapshotClient) *RPC { return New(client) }
+// NewRPC constructs a UI transport adapter over a qik client.
+func NewRPC(client Client) *RPC { return New(client) }
 
 // Snapshot fetches one daemon snapshot. The underlying qik client owns the
 // request connection; client failures become UI-safe transport errors.
@@ -30,6 +31,17 @@ func (r *RPC) Snapshot(ctx context.Context) (Snapshot, error) {
 		return Snapshot{}, mapError(err)
 	}
 	return snapshotFromWire(result), nil
+}
+
+// Metrics fetches one daemon metrics snapshot. An older daemon that does not
+// implement metrics becomes a scoped unsupported capability, not a transport
+// failure that affects the rest of the Dashboard.
+func (r *RPC) Metrics(ctx context.Context) (Metrics, error) {
+	result, err := r.client.Metrics(ctx)
+	if err != nil {
+		return Metrics{}, mapMetricsError(err)
+	}
+	return result, nil
 }
 
 func snapshotFromWire(result wire.SnapshotResult) Snapshot {
@@ -63,6 +75,14 @@ func mapError(err error) error {
 		return &Error{Code: ErrorCode(clientError.Code)}
 	}
 	return err
+}
+
+func mapMetricsError(err error) error {
+	var clientError *client.Error
+	if errors.As(err, &clientError) && clientError.Code == wire.CodeUnknownCommand {
+		return &Error{Code: ErrorUnsupported}
+	}
+	return mapError(err)
 }
 
 var _ DaemonAPI = (*RPC)(nil)

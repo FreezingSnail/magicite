@@ -45,11 +45,23 @@ type ColdEvent struct {
 	ReceivedAt time.Time
 }
 
+// MetricsState retains only daemon-owned metrics data. LastGood remains
+// visible with Stale after a temporary failure; Unsupported hides the pane.
+type MetricsState struct {
+	LastGood    transport.Metrics
+	HasLastGood bool
+	Loading     bool
+	Stale       bool
+	Unavailable bool
+	Unsupported bool
+}
+
 // ModelState is an immutable copy of root-model state for rendering and
 // composition. Its collections preserve daemon order and never require map
 // traversal.
 type ModelState struct {
 	Snapshot       transport.Snapshot
+	Metrics        MetricsState
 	HasSnapshot    bool
 	Freshness      SnapshotFreshness
 	Connection     ConnectionState
@@ -66,12 +78,14 @@ func initialModelState() ModelState {
 	return ModelState{
 		Freshness:  SnapshotUnknown,
 		Connection: ConnectionLoading,
+		Metrics:    MetricsState{Loading: true},
 		Selection:  Selection{Repository: -1, Seat: -1, Session: -1, Bead: -1},
 	}
 }
 
 func cloneModelState(state ModelState) ModelState {
 	state.Snapshot = cloneSnapshot(state.Snapshot)
+	state.Metrics.LastGood = cloneMetrics(state.Metrics.LastGood)
 	state.Events = cloneColdEvents(state.Events)
 	state.Notices = append([]transport.StreamNotice(nil), state.Notices...)
 	return state
@@ -110,4 +124,16 @@ func cloneEventFields(fields map[string]string) map[string]string {
 		clone[key] = value
 	}
 	return clone
+}
+
+func cloneMetrics(metrics transport.Metrics) transport.Metrics {
+	metrics.Lifecycle = append([]wire.MetricsCount(nil), metrics.Lifecycle...)
+	metrics.Land = append([]wire.MetricsCount(nil), metrics.Land...)
+	metrics.Roles = append([]wire.RoleDuration(nil), metrics.Roles...)
+	metrics.Queue = append([]wire.RepoQueueDepth(nil), metrics.Queue...)
+	if metrics.QueueSampledAt != nil {
+		sampledAt := *metrics.QueueSampledAt
+		metrics.QueueSampledAt = &sampledAt
+	}
+	return metrics
 }

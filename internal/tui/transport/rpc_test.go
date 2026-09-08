@@ -152,3 +152,44 @@ func TestRPCSnapshotServerClosesAfterEachResponse(t *testing.T) {
 		t.Fatal("snapshot connection remained open")
 	}
 }
+
+func TestRPCMetricsUsesTypedClientAndMapsUnsupported(t *testing.T) {
+	result := wire.MetricsResult{Lifecycle: []wire.MetricsCount{{Key: "pickup", Count: 2}}, Land: []wire.MetricsCount{}, Roles: []wire.RoleDuration{}, Queue: []wire.RepoQueueDepth{}}
+	socket := serveSocket(t, func(conn net.Conn) {
+		request, err := wire.NewDecoder(conn).Request()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if request.Command != "metrics" || request.Params != nil {
+			t.Errorf("request = %#v, want no-parameter metrics", request)
+			return
+		}
+		payload, err := json.Marshal(result)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if err := wire.NewEncoder(conn).Encode(wire.Response{Schema: wire.Schema, ID: request.ID, Result: payload}); err != nil {
+			t.Error(err)
+		}
+	})
+	got, err := NewRPC(client.New(client.Options{Socket: socket, Timeout: time.Second})).Metrics(context.Background())
+	if err != nil || !reflect.DeepEqual(got, result) {
+		t.Fatalf("Metrics() = (%#v, %v), want (%#v, nil)", got, err, result)
+	}
+
+	unsupported := serveSocket(t, func(conn net.Conn) {
+		request, err := wire.NewDecoder(conn).Request()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		_ = wire.NewEncoder(conn).Encode(wire.Response{Schema: wire.Schema, ID: request.ID, Err: &wire.Error{Code: wire.CodeUnknownCommand}})
+	})
+	_, err = NewRPC(client.New(client.Options{Socket: unsupported, Timeout: time.Second})).Metrics(context.Background())
+	var transportError *Error
+	if !errors.As(err, &transportError) || transportError.Code != ErrorUnsupported {
+		t.Fatalf("Metrics() error = %#v, want unsupported", err)
+	}
+}

@@ -145,6 +145,10 @@ func (a *scriptedAPI) maximum() int {
 	return a.peak
 }
 
+func (a *scriptedAPI) Metrics(context.Context) (transport.Metrics, error) {
+	return transport.Metrics{}, nil
+}
+
 type scriptedStream struct{ subscriptions chan *scriptedSubscription }
 
 type scriptedSubscription struct {

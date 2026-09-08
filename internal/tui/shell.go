@@ -216,6 +216,9 @@ func (l DashboardLayout) Render(state ModelState, now time.Time, refresh Dashboa
 		RenderDashboardSessions(DashboardSessionsInput{Sessions: state.Snapshot.Sessions}, l.width),
 		RenderDashboardEvents(DashboardEventsInput{Events: events, Notices: notices, Width: l.width, Color: !l.noColor}),
 	}
+	if metrics := RenderDashboardMetrics(DashboardMetricsInput{Metrics: state.Metrics}, l.width); metrics != "" {
+		panels = append(panels, metrics)
+	}
 	return trimShellHeight(strings.Join(panels, "\n\n"), l.height)
 }
 
@@ -359,6 +362,7 @@ func (p *Program) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			p.refreshError = ""
 		}
 		p.updateModel(SnapshotMsg{Snapshot: value.Snapshot, Error: value.Err})
+		p.updateModel(MetricsMsg{Metrics: value.Metrics, Error: value.MetricsErr})
 	case RefreshNotice:
 		if value.Generation >= p.generation {
 			if value.Kind == RefreshEvent {
@@ -367,7 +371,7 @@ func (p *Program) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 				p.updateModel(StreamNoticeMsg{Notice: value.Stream})
 			}
 		}
-	case SnapshotMsg, transport.Snapshot, StreamEventMsg, transport.Event, StreamNoticeMsg, transport.StreamNotice, SelectionMsg:
+	case SnapshotMsg, transport.Snapshot, MetricsMsg, transport.Metrics, StreamEventMsg, transport.Event, StreamNoticeMsg, transport.StreamNotice, SelectionMsg:
 		p.updateModel(value)
 	}
 	if p.isStarted() {

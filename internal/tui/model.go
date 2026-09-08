@@ -27,6 +27,12 @@ type SnapshotMsg struct {
 	Error    error
 }
 
+// MetricsMsg delivers one metrics attempt independently from snapshot state.
+type MetricsMsg struct {
+	Metrics transport.Metrics
+	Error   error
+}
+
 // StreamEventMsg delivers one ordered, non-authoritative stream event.
 type StreamEventMsg struct{ Event transport.Event }
 
@@ -89,6 +95,10 @@ func (model Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		model.applySnapshot(message)
 	case transport.Snapshot:
 		model.applySnapshot(SnapshotMsg{Snapshot: message})
+	case MetricsMsg:
+		model.applyMetrics(message)
+	case transport.Metrics:
+		model.applyMetrics(MetricsMsg{Metrics: message})
 	case StreamEventMsg:
 		model.applyEvent(message.Event)
 	case transport.Event:
@@ -142,6 +152,26 @@ func (model *Model) applySnapshot(message SnapshotMsg) {
 	model.changed()
 }
 
+func (model *Model) applyMetrics(message MetricsMsg) {
+	if message.Error == nil {
+		model.state.Metrics = MetricsState{LastGood: cloneMetrics(message.Metrics), HasLastGood: true}
+		model.changed()
+		return
+	}
+	if isUnsupported(message.Error) {
+		model.state.Metrics = MetricsState{Unsupported: true}
+		model.changed()
+		return
+	}
+	metrics := model.state.Metrics
+	metrics.Loading = false
+	metrics.Unavailable = !metrics.HasLastGood
+	metrics.Stale = metrics.HasLastGood
+	metrics.Unsupported = false
+	model.state.Metrics = metrics
+	model.changed()
+}
+
 func (model *Model) applyEvent(event transport.Event) {
 	if event.Seq != 0 && event.Seq <= model.state.Cursor {
 		return
@@ -177,6 +207,10 @@ func (model *Model) applyNotice(notice transport.StreamNotice) {
 	}
 }
 
+func isUnsupported(err error) bool {
+	var transportError *transport.Error
+	return errors.As(err, &transportError) && transportError.Code == transport.ErrorUnsupported
+}
 func (model *Model) applySelection(message SelectionMsg) {
 	index := message.Index
 	switch message.Kind {
