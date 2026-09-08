@@ -158,16 +158,16 @@ func metricsResult() wire.MetricsResult {
 	startedAt := time.Date(2026, time.September, 8, 4, 5, 6, 0, time.UTC)
 	sampledAt := startedAt.Add(time.Minute)
 	return wire.MetricsResult{
-		StartedAt:     startedAt,
-		UptimeSeconds: 60,
-		Lifecycle:     []wire.MetricsCount{{Key: "pickup", Count: 1}},
-		Land:          []wire.MetricsCount{{Key: "ok", Count: 2}},
-		Sessions:      wire.SessionGauges{Active: 3, Peak: 4, Completed: 5, Failed: 6},
-		Roles:         []wire.RoleDuration{{Role: "implementer", Sessions: 7, TotalSeconds: 480}},
-		Queue:         []wire.RepoQueueDepth{{Repo: "magicite", Depth: 8}},
-		QueueTotal:    8,
+		StartedAt:      startedAt,
+		UptimeSeconds:  60,
+		Lifecycle:      []wire.MetricsCount{{Key: "pickup", Count: 1}},
+		Land:           []wire.MetricsCount{{Key: "ok", Count: 2}},
+		Sessions:       wire.SessionGauges{Active: 3, Peak: 4, Completed: 5, Failed: 6},
+		Roles:          []wire.RoleDuration{{Role: "implementer", Sessions: 7, TotalSeconds: 480}},
+		Queue:          []wire.RepoQueueDepth{{Repo: "magicite", Depth: 8}},
+		QueueTotal:     8,
 		QueueSampledAt: &sampledAt,
-		Bus:           wire.BusMetrics{Published: 9, Dropped: 10},
+		Bus:            wire.BusMetrics{Published: 9, Dropped: 10},
 	}
 }
 
