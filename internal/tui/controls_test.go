@@ -120,14 +120,14 @@ func TestControlFlowSuppressesLateResultsAndRepairsAmbiguity(t *testing.T) {
 }
 
 type controlAPI struct {
-	start       wire.StatusResult
-	stop        wire.StopResult
-	review      wire.ReviewResult
-	err         error
-	startCalls  int
-	stopCalls   int
-	reviewCalls int
-	stopParams  wire.StopParams
+	start        wire.StatusResult
+	stop         wire.StopResult
+	review       wire.ReviewResult
+	err          error
+	startCalls   int
+	stopCalls    int
+	reviewCalls  int
+	stopParams   wire.StopParams
 	reviewParams wire.ReviewParams
 }
 
