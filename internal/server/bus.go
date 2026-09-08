@@ -10,6 +10,12 @@ import (
 
 const defaultBusCapacity = 1024
 
+// BusMetrics reports cumulative bus event delivery totals.
+type BusMetrics struct {
+	Published uint64
+	Dropped   uint64
+}
+
 // Bus retains recent events and offers them to subscribers without waiting for
 // a subscriber to consume them.
 type Bus struct {
@@ -21,6 +27,7 @@ type Bus struct {
 	next     uint64
 	closed   bool
 	subs     map[*Subscription]struct{}
+	metrics  BusMetrics
 	clock    func() time.Time
 }
 
@@ -49,6 +56,7 @@ func (b *Bus) Publish(event wire.Event) uint64 {
 		return 0
 	}
 	b.next++
+	b.metrics.Published++
 	event.Seq = b.next
 	event.Schema = wire.Schema
 	if event.Time.IsZero() {
@@ -60,6 +68,7 @@ func (b *Bus) Publish(event wire.Event) uint64 {
 		case subscription.events <- event:
 		default:
 			subscription.dropped++
+			b.metrics.Dropped++
 			if !subscription.warned {
 				subscription.warned = true
 				warnings++
@@ -118,6 +127,13 @@ func (b *Bus) Last() uint64 {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.next
+}
+
+// Metrics returns cumulative accepted publications and rejected subscriber offers.
+func (b *Bus) Metrics() BusMetrics {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.metrics
 }
 
 // Close stops future publication and closes every subscription.
