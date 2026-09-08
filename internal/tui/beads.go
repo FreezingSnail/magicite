@@ -28,6 +28,7 @@ type BeadsView struct {
 	parsed    Query
 	focused   bool
 	selection Selection
+	detail    *BeadDetail
 }
 
 // NewBeadsView constructs an empty Beads tab.
@@ -39,6 +40,9 @@ func (*BeadsView) Title() string { return "Beads" }
 
 // Update changes the filter or moves selection through Table.MoveBy.
 func (view *BeadsView) Update(message tea.Msg) (TabView, tea.Cmd) {
+	if view.detail != nil && view.detail.IsOpen() {
+		return view, view.detail.Update(message)
+	}
 	key, ok := message.(tea.KeyMsg)
 	if !ok {
 		return view, nil
@@ -65,6 +69,10 @@ func (view *BeadsView) Update(message tea.Msg) (TabView, tea.Cmd) {
 	switch key.String() {
 	case "/":
 		view.focused = true
+	case "enter":
+		if bead, ok := view.SelectedBead(); ok {
+			view.detail = NewBeadDetail(bead)
+		}
 	case "j", "down":
 		view.move(1)
 	case "k", "up":
@@ -82,18 +90,33 @@ func (view *BeadsView) Update(message tea.Msg) (TabView, tea.Cmd) {
 func (view *BeadsView) Snapshot(snapshot wire.SnapshotResult) TabView {
 	view.beads = snapshot.Beads
 	view.rebuild()
+	if view.detail != nil && view.detail.IsOpen() {
+		for _, bead := range view.beads {
+			if bead.ID == view.detail.beadID {
+				view.detail.Refresh(bead)
+				return view
+			}
+		}
+		view.detail.Refresh(wire.BeadResult{})
+	}
 	return view
 }
 
-// Hints exposes filter and row navigation keys.
-func (*BeadsView) Hints() []Hint {
-	return []Hint{{Key: "/", Label: "filter", Enabled: true}, {Key: "j/k", Label: "select", Enabled: true}}
+// Hints exposes only keys usable by the currently focused Beads pane.
+func (view *BeadsView) Hints() []Hint {
+	if view.detail != nil && view.detail.IsOpen() {
+		return []Hint{{Key: "j/k", Label: "scroll", Enabled: true}, {Key: "Esc", Label: "close", Enabled: true}}
+	}
+	return []Hint{{Key: "Enter", Label: "detail", Enabled: len(view.filtered) > 0}, {Key: "/", Label: "filter", Enabled: true}, {Key: "j/k", Label: "select", Enabled: true}}
 }
 
-// View renders cached data without I/O, mutation, or clock reads.
+// View renders the open detail or cached table data without I/O.
 func (view *BeadsView) View(width, height int) string {
 	if width <= 0 || height <= 0 {
 		return ""
+	}
+	if view.detail != nil && view.detail.IsOpen() {
+		return view.detail.View(width, height)
 	}
 	if len(view.rows) == 0 {
 		return Truncate("No beads in snapshot", width)
