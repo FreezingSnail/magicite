@@ -29,9 +29,13 @@ const (
 	SnapshotStale   SnapshotFreshness = "stale"
 )
 
-// Selection holds contiguous indices into the current snapshot collections.
-// A value of -1 selects nothing.
+// Selection identifies a stable tab row and its resolved index. A value of -1
+// selects no row. Legacy collection indices remain until their views migrate to
+// stable tab selections.
 type Selection struct {
+	Key   string
+	Index int
+
 	Repository int
 	Seat       int
 	Session    int
