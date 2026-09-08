@@ -177,3 +177,50 @@ type Eligibility struct {
 	Eligible bool    `json:"eligible"`
 	Reason   *string `json:"reason"`
 }
+
+// MetricsCount reports one keyed cumulative counter.
+type MetricsCount struct {
+	Key   string `json:"key"`
+	Count uint64 `json:"count"`
+}
+
+// SessionGauges reports live and terminal session counts.
+type SessionGauges struct {
+	Active    uint64 `json:"active"`
+	Peak      uint64 `json:"peak"`
+	Completed uint64 `json:"completed"`
+	Failed    uint64 `json:"failed"`
+}
+
+// RoleDuration totals one role's sessions without retaining samples.
+type RoleDuration struct {
+	Role         string `json:"role"`
+	Sessions     uint64 `json:"sessions"`
+	TotalSeconds int64  `json:"total_seconds"`
+}
+
+// RepoQueueDepth reports one repository's sampled ready task count.
+type RepoQueueDepth struct {
+	Repo  string `json:"repo"`
+	Depth int    `json:"depth"`
+}
+
+// BusMetrics reports event bus publication totals.
+type BusMetrics struct {
+	Published uint64 `json:"published"`
+	Dropped   uint64 `json:"dropped"`
+}
+
+// MetricsResult is the daemon's cumulative fleet counter set.
+type MetricsResult struct {
+	StartedAt      time.Time        `json:"started_at"`
+	UptimeSeconds  int64            `json:"uptime_seconds"`
+	Lifecycle      []MetricsCount   `json:"lifecycle"`
+	Land           []MetricsCount   `json:"land"`
+	Sessions       SessionGauges    `json:"sessions"`
+	Roles          []RoleDuration   `json:"roles"`
+	Queue          []RepoQueueDepth `json:"queue"`
+	QueueTotal     int              `json:"queue_total"`
+	QueueSampledAt *time.Time       `json:"queue_sampled_at"`
+	Bus            BusMetrics       `json:"bus"`
+}
