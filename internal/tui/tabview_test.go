@@ -77,11 +77,11 @@ func TestTabRegistrySnapshotsEveryViewAndConcatenatesEnabledHints(t *testing.T) 
 }
 
 type stubTabView struct {
-	title     string
-	hints     []Hint
-	selected  Selection
-	updates   int
-	snapshots int
+	title      string
+	hints      []Hint
+	selected   Selection
+	updates    int
+	snapshots  int
 	generation uint64
 }
 
@@ -91,7 +91,7 @@ func (view stubTabView) Update(tea.Msg) (TabView, tea.Cmd) {
 	return view, nil
 }
 func (view stubTabView) View(int, int) string { return view.title }
-func (view stubTabView) Hints() []Hint { return view.hints }
+func (view stubTabView) Hints() []Hint        { return view.hints }
 func (view stubTabView) Snapshot(snapshot wire.SnapshotResult) TabView {
 	view.snapshots++
 	view.generation = snapshot.Generation
