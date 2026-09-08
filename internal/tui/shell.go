@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/FreezingSnail/magicite/internal/tui/transport"
+	"github.com/FreezingSnail/magicite/internal/wire"
 )
 
 // Screen identifies a read-only shell view.
@@ -247,6 +248,7 @@ func dashboardFreshness(freshness SnapshotFreshness) DashboardFreshness {
 // ProgramOptions supplies the composed TUI runtime dependencies and test seams.
 type ProgramOptions struct {
 	API            transport.DaemonAPI
+	Actions        DaemonAPI
 	Stream         transport.EventStream
 	Now            func() time.Time
 	Cadence        time.Duration
@@ -263,6 +265,7 @@ type Program struct {
 	model       Model
 	shell       Shell
 	layout      DashboardLayout
+	tabs        *TabRegistry
 	coordinator *RefreshCoordinator
 	now         func() time.Time
 	messages    chan tea.Msg
@@ -285,7 +288,7 @@ func NewProgram(options ProgramOptions) *Program {
 	width, height := shell.Size()
 	program := &Program{
 		model: NewModel(ModelOptions{Now: options.Now}), shell: shell,
-		layout: NewDashboardLayout(width, height, shell.NoColor()), now: options.Now,
+		layout: NewDashboardLayout(width, height, shell.NoColor()), tabs: RegisterTabs(nil, options.Actions), now: options.Now,
 		messages: make(chan tea.Msg, 64), refresh: DashboardRefreshIdle,
 	}
 	program.coordinator = NewRefreshCoordinator(options.API, options.Stream, RefreshOptions{
@@ -347,6 +350,16 @@ func (p *Program) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	if action.Focus {
 		p.coordinator.Focus()
 	}
+	if p.shell.Screen() != ScreenDashboard && p.tabs != nil {
+		next, command := p.tabs.Update(Tab(p.shell.Screen()), message)
+		p.tabs = &next
+		if isCockpitActionResult(message) {
+			p.coordinator.Refresh()
+		}
+		if command != nil {
+			return p, command
+		}
+	}
 
 	switch value := message.(type) {
 	case RefreshResult:
@@ -380,10 +393,11 @@ func (p *Program) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	return p, nil
 }
 
-// View renders the selected read-only screen.
+// View renders the selected cockpit screen.
 func (p *Program) View() string {
-	if p.shell.Screen() != ScreenDashboard {
-		return p.shell.View(fit(string(p.shell.Screen())+"\nread-only panel not implemented", p.layout.width))
+	if p.shell.Screen() != ScreenDashboard && p.tabs != nil {
+		width, height := p.shell.Size()
+		return p.shell.View(p.tabs.View(Tab(p.shell.Screen()), width, height))
 	}
 	return p.shell.View(p.layout.Render(p.model.State(), p.now(), p.refresh, p.refreshError))
 }
@@ -391,6 +405,53 @@ func (p *Program) View() string {
 func (p *Program) updateModel(message tea.Msg) {
 	next, _ := p.model.Update(message)
 	p.model = next.(Model)
+	if p.tabs == nil {
+		return
+	}
+	switch value := message.(type) {
+	case SnapshotMsg:
+		if value.Error == nil {
+			next := p.tabs.Snapshot(wireSnapshot(value.Snapshot))
+			p.tabs = &next
+		}
+	case transport.Snapshot:
+		next := p.tabs.Snapshot(wireSnapshot(value))
+		p.tabs = &next
+	case StreamEventMsg:
+		if events := cockpitEvents(p.tabs); events != nil {
+			events.Append(value.Event)
+		}
+	case transport.Event:
+		if events := cockpitEvents(p.tabs); events != nil {
+			events.Append(value)
+		}
+	}
+}
+
+func isCockpitActionResult(message tea.Msg) bool {
+	switch message.(type) {
+	case DispatchResultMsg, StartResultMsg, StopResultMsg, ReviewResultMsg:
+		return true
+	}
+	return false
+}
+
+func wireSnapshot(snapshot transport.Snapshot) wire.SnapshotResult {
+	result := wire.SnapshotResult{
+		ModelVersion: snapshot.ModelVersion, Generation: snapshot.Generation, CapturedAt: snapshot.CapturedAt,
+		Cursor: snapshot.Cursor, Fresh: snapshot.Fresh, Stale: snapshot.Stale, Runtime: snapshot.Runtime,
+		Sessions: append([]wire.SessionResult(nil), snapshot.Sessions...), Beads: append([]wire.BeadResult(nil), snapshot.Beads...),
+		StatusCounts: append([]wire.StatusCount(nil), snapshot.StatusCounts...), RepositoryErrors: append([]wire.RepositoryError(nil), snapshot.RepositoryErrors...),
+	}
+	result.Repositories = make([]wire.RepoResult, len(snapshot.Repositories))
+	for index, repo := range snapshot.Repositories {
+		result.Repositories[index] = wire.RepoResult{Name: repo.Name, Prefix: repo.Prefix, Branch: repo.Branch}
+	}
+	result.Seats = make([]wire.SeatResult, len(snapshot.Seats))
+	for index, seat := range snapshot.Seats {
+		result.Seats[index] = wire.SeatResult{Name: seat.Name, Role: seat.Role, Repo: seat.Repo, Task: seat.Task, Busy: seat.Busy}
+	}
+	return result
 }
 
 func (p *Program) start(ctx context.Context) {

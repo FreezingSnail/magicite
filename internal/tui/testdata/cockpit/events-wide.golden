@@ -1,0 +1,3 @@
+Events  follow:on  dropped-oldest:0
+  Time                 Level   Kind          Repository       Task             Seat         Summary 
+> 2026-09-08T01:02:03Z info    complete      magicite         magicite-400.10  ifrit        worker …

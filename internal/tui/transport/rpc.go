@@ -12,9 +12,10 @@ import (
 type Client interface {
 	Snapshot(context.Context) (wire.SnapshotResult, error)
 	Metrics(context.Context) (wire.MetricsResult, error)
+	Call(context.Context, string, any, any) error
 }
 
-// RPC adapts qik snapshot and metrics calls to the UI daemon boundary.
+// RPC adapts qik snapshot and action calls to the UI daemon boundary.
 type RPC struct{ client Client }
 
 // New constructs a UI transport adapter over a qik client.
@@ -40,6 +41,42 @@ func (r *RPC) Metrics(ctx context.Context) (Metrics, error) {
 	result, err := r.client.Metrics(ctx)
 	if err != nil {
 		return Metrics{}, mapMetricsError(err)
+	}
+	return result, nil
+}
+
+// Dispatch sends the existing daemon dispatch command.
+func (r *RPC) Dispatch(ctx context.Context, params wire.DispatchParams) (wire.DispatchResult, error) {
+	var result wire.DispatchResult
+	if err := r.client.Call(ctx, "dispatch", params, &result); err != nil {
+		return wire.DispatchResult{}, mapError(err)
+	}
+	return result, nil
+}
+
+// Start sends the existing daemon start command.
+func (r *RPC) Start(ctx context.Context) (wire.StatusResult, error) {
+	var result wire.StatusResult
+	if err := r.client.Call(ctx, "start", nil, &result); err != nil {
+		return wire.StatusResult{}, mapError(err)
+	}
+	return result, nil
+}
+
+// Stop sends the existing daemon stop command.
+func (r *RPC) Stop(ctx context.Context, params wire.StopParams) (wire.StopResult, error) {
+	var result wire.StopResult
+	if err := r.client.Call(ctx, "stop", params, &result); err != nil {
+		return wire.StopResult{}, mapError(err)
+	}
+	return result, nil
+}
+
+// Review sends the existing daemon review command.
+func (r *RPC) Review(ctx context.Context, params wire.ReviewParams) (wire.ReviewResult, error) {
+	var result wire.ReviewResult
+	if err := r.client.Call(ctx, "review", params, &result); err != nil {
+		return wire.ReviewResult{}, mapError(err)
 	}
 	return result, nil
 }

@@ -24,8 +24,10 @@ func tuiCommand(ctx context.Context, e *Env, args []string) int {
 	if e.Client == nil {
 		return Fail(e, errors.New("tui: client is required"))
 	}
+	api := transport.NewRPC(e.Client)
 	program := tui.NewProgram(tui.ProgramOptions{
-		API:     transport.NewRPC(e.Client),
+		API:     api,
+		Actions: api,
 		Stream:  transport.NewEventStream(e.Client),
 		NoColor: os.Getenv("NO_COLOR") != "",
 	})
