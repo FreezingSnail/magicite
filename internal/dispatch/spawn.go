@@ -7,6 +7,7 @@ import (
 
 	"github.com/FreezingSnail/magicite/internal/config"
 	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/metrics"
 	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
@@ -175,6 +176,7 @@ func (d *Dispatcher) spawnSessionWithResolution(ctx context.Context, repository 
 	fields["effort"] = resolution.Effort
 	fields["handle"] = handle
 	d.log(logging.Info, logging.KindPickup, fields)
+	d.metrics.RecordLifecycle(metrics.LifecyclePickup)
 	return handle
 }
 
@@ -182,6 +184,7 @@ func (d *Dispatcher) dispatchFailed(ctx context.Context, repository repo.Repo, t
 	fields := dispatchFields(repository, task, role, seat)
 	fields["error"] = err.Error()
 	d.log(logging.Error, "dispatch-failed", fields)
+	d.metrics.RecordLifecycle(metrics.LifecycleError)
 	_ = d.beads.Comment(ctx, repository, task, "session failed; task is left open.")
 	if role != Reviewer {
 		_ = d.beads.Release(ctx, repository, task)

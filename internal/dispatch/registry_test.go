@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/metrics"
 	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
@@ -129,5 +130,23 @@ func TestRegistryConcurrentAccess(t *testing.T) {
 	group.Wait()
 	if !dispatcher.Idle() {
 		t.Error("Idle() false after concurrent removals")
+	}
+}
+
+func TestRegistryMetricsTracksOnlyNewLiveHandles(t *testing.T) {
+	dispatcher, _ := newRegistryDispatcher(t)
+	dispatcher.Add(Session{Handle: "same", Role: Implementer})
+	dispatcher.Add(Session{Handle: "same", Role: Implementer})
+	dispatcher.Add(Session{Handle: "other", Role: Designer})
+
+	snapshot := dispatcher.metrics.(*metrics.Registry).Snapshot()
+	if got, want := snapshot.Sessions, (metrics.SessionGauges{Active: 2, Peak: 2}); got != want {
+		t.Fatalf("session gauges = %#v, want %#v", got, want)
+	}
+	if _, ok := dispatcher.Remove("missing"); ok {
+		t.Fatal("Remove(missing) reported present")
+	}
+	if got := dispatcher.metrics.(*metrics.Registry).Snapshot().Sessions; got != snapshot.Sessions {
+		t.Fatalf("missing remove changed metrics: %#v", got)
 	}
 }

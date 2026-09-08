@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/metrics"
 	stampdata "github.com/FreezingSnail/magicite/internal/stamp"
 )
 
@@ -21,17 +22,21 @@ func (d *Dispatcher) OnComplete(ctx context.Context, handle string, outcome Outc
 	fields["handle"] = handle
 	fields["outcome"] = outcome
 	d.log(logging.Info, logging.KindComplete, fields)
+	d.metrics.RecordLifecycle(metrics.LifecycleComplete)
 
-	completed := false
+	failed := outcome != Completed
 	deferred := func() {
 		if recovered := recover(); recovered != nil {
+			failed = true
 			d.terminalFailure(ctx, session, fmt.Sprintf("session routing panicked: %v", recovered))
 		}
+		d.metrics.FinishSession(string(session.Role), d.clock.Now().Sub(session.Started), failed)
 		_ = d.runner.Delete(ctx, handle)
 		d.completeDrain()
 	}
 	defer deferred()
 
+	completed := false
 	if outcome == Completed {
 		completed = d.complete(ctx, session)
 	}
@@ -52,6 +57,8 @@ func (d *Dispatcher) complete(ctx context.Context, session Session) bool {
 		}
 		if err := d.gate.CompleteReview(ctx, session.Handle, output); err != nil {
 			d.abortReview(ctx, session, err.Error())
+		} else {
+			d.metrics.RecordLifecycle(metrics.LifecycleReview)
 		}
 		return true
 	}
@@ -70,9 +77,19 @@ func (d *Dispatcher) complete(ctx context.Context, session Session) bool {
 
 	switch result {
 	case LandOK:
+		d.recordLand(metrics.LandOK)
 		return d.landed(ctx, session, d.FormatDiffs(diffs), provenance)
 	case LandConflict:
+		d.recordLand(metrics.LandConflict)
 		d.landConflict(ctx, session)
+		return true
+	case LandGateFailed:
+		d.recordLand(metrics.LandGateFailed)
+		d.landFailure(ctx, session, "task is left open after landing gate failed.")
+		return true
+	case LandFailed:
+		d.recordLand(metrics.LandFailed)
+		d.landFailure(ctx, session, "task is left open after landing failed.")
 		return true
 	default:
 		d.landFailure(ctx, session, "task is left open after landing failed.")
@@ -80,11 +97,18 @@ func (d *Dispatcher) complete(ctx context.Context, session Session) bool {
 	}
 }
 
+func (d *Dispatcher) recordLand(result string) {
+	d.metrics.RecordLifecycle(metrics.LifecycleLand)
+	d.metrics.RecordLand(result)
+}
+
 func (d *Dispatcher) landed(ctx context.Context, session Session, closeOutput string, provenance Stamp) bool {
 	if session.Role == Designer {
 		if session.Decomposition {
 			if _, err := d.gate.DecompositionVerdict(ctx, session.Repo, session.Task); err != nil {
 				d.log(logging.Warn, logging.KindVerdict, map[string]any{"repo": session.Repo.LogName(), "epic": session.Task, "error": err.Error()})
+			} else {
+				d.metrics.RecordLifecycle(metrics.LifecycleVerdict)
 			}
 		}
 		return true
@@ -107,6 +131,7 @@ func (d *Dispatcher) landed(ctx context.Context, session Session, closeOutput st
 		return true
 	}
 	d.log(logging.Info, logging.KindClose, dispatchFields(session.Repo, session.Task, session.Role, session.Seat))
+	d.metrics.RecordLifecycle(metrics.LifecycleClose)
 
 	epic, err := d.gate.DueEpic(ctx, session.Repo, session.Task)
 	if err != nil || epic == "" {
@@ -143,12 +168,15 @@ func (d *Dispatcher) landFailure(ctx context.Context, session Session, comment s
 
 func (d *Dispatcher) terminalFailure(ctx context.Context, session Session, comment string) {
 	d.log(logging.Warn, "session-failed", dispatchFields(session.Repo, session.Task, session.Role, session.Seat))
+	d.metrics.RecordLifecycle(metrics.LifecycleError)
 	_ = d.beads.Comment(ctx, session.Repo, session.Task, comment)
 	_ = d.beads.Release(ctx, session.Repo, session.Task)
 }
 
 func (d *Dispatcher) abortReview(ctx context.Context, session Session, reason string) {
-	_ = d.gate.AbortReview(ctx, session.Handle, reason)
+	if err := d.gate.AbortReview(ctx, session.Handle, reason); err == nil {
+		d.metrics.RecordLifecycle(metrics.LifecycleReview)
+	}
 	d.log(logging.Warn, logging.KindReview, map[string]any{"repo": session.Repo.LogName(), "epic": session.Task, "handle": session.Handle, "error": reason})
 }
 

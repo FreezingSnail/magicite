@@ -31,8 +31,12 @@ type Session struct {
 func (d *Dispatcher) Add(session Session) {
 	session.Started = d.clock.Now()
 	d.sessionsMu.Lock()
-	defer d.sessionsMu.Unlock()
+	_, exists := d.sessions[session.Handle]
 	d.sessions[session.Handle] = session
+	d.sessionsMu.Unlock()
+	if !exists {
+		d.metrics.StartSession()
+	}
 }
 
 // Remove deletes and returns a live session by handle.

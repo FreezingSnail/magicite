@@ -9,7 +9,16 @@ import (
 
 	"github.com/FreezingSnail/magicite/internal/config"
 	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/metrics"
 )
+
+// MetricsSink records dispatcher lifecycle and session facts.
+type MetricsSink interface {
+	RecordLifecycle(string) bool
+	RecordLand(string) bool
+	StartSession()
+	FinishSession(string, time.Duration, bool) bool
+}
 
 // Log records a dispatcher lifecycle event.
 type Log func(logging.Level, string, map[string]any)
@@ -23,6 +32,7 @@ type Deps struct {
 	Repos      Repos
 	Gate       Gate
 	Clock      Clock
+	Metrics    MetricsSink
 	Config     config.Config
 	Logger     Log
 }
@@ -45,6 +55,7 @@ type Dispatcher struct {
 	repos         Repos
 	gate          Gate
 	clock         Clock
+	metrics       MetricsSink
 	config        config.Config
 	log           Log
 	sessionsMu    sync.RWMutex
@@ -66,6 +77,9 @@ type Dispatcher struct {
 
 // New constructs a Dispatcher after validating every port.
 func New(deps Deps) (*Dispatcher, error) {
+	if nilDependency(deps.Metrics) {
+		deps.Metrics = metrics.NewRegistry()
+	}
 	for _, dependency := range []struct {
 		name  string
 		value any
@@ -100,6 +114,7 @@ func New(deps Deps) (*Dispatcher, error) {
 		repos:        deps.Repos,
 		gate:         deps.Gate,
 		clock:        deps.Clock,
+		metrics:      deps.Metrics,
 		config:       deps.Config,
 		log:          log,
 		sessions:     make(map[string]Session),

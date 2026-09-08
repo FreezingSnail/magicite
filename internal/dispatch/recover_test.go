@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/metrics"
 	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
@@ -40,6 +41,9 @@ func TestRecoverTasksHonorsAllowListAndLogsSuccessfulRecovery(t *testing.T) {
 	fields := (*logs)[1].fields
 	if fields["task"] != "task-2" || fields["repo"] != repository.LogName() || fields["reason"] != orphanedInProgressReason {
 		t.Fatalf("recovery fields = %#v", fields)
+	}
+	if got := dispatcher.metrics.(*metrics.Registry).Snapshot().Lifecycle[metrics.LifecycleRecovery]; got != 1 {
+		t.Fatalf("recovery metric = %d, want 1", got)
 	}
 }
 

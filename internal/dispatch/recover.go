@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/FreezingSnail/magicite/internal/logging"
+	"github.com/FreezingSnail/magicite/internal/metrics"
 	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
@@ -65,6 +66,7 @@ func (d *Dispatcher) RecoverTasks(ctx context.Context, repository repo.Repo, inP
 			"repo":   repository.LogName(),
 			"reason": orphanedInProgressReason,
 		})
+		d.metrics.RecordLifecycle(metrics.LifecycleRecovery)
 		dispatched++
 	}
 	return dispatched

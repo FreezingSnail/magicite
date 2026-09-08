@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FreezingSnail/magicite/internal/metrics"
 	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
@@ -18,6 +19,7 @@ func completeDeps() Deps {
 		Repos:      &fakeRepos{},
 		Gate:       &fakeGate{},
 		Clock:      newManualClock(time.Unix(0, 0)),
+		Metrics:    metrics.NewRegistry(),
 	}
 }
 

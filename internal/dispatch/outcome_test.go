@@ -5,8 +5,10 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/FreezingSnail/magicite/internal/config"
+	"github.com/FreezingSnail/magicite/internal/metrics"
 	"github.com/FreezingSnail/magicite/internal/repo"
 )
 
@@ -156,6 +158,9 @@ func TestOnCompleteIgnoresUnknownHandle(t *testing.T) {
 	if len(beads.Calls()) != 0 || len(lander.Calls()) != 0 || len(runner.Calls()) != 0 {
 		t.Fatalf("unknown completion had side effects: beads=%#v lander=%#v runner=%#v", beads.Calls(), lander.Calls(), runner.Calls())
 	}
+	if snapshot := dispatcher.metrics.(*metrics.Registry).Snapshot(); snapshot.Sessions != (metrics.SessionGauges{}) || snapshot.Lifecycle[metrics.LifecycleComplete] != 0 {
+		t.Fatalf("unknown completion changed metrics: %#v", snapshot)
+	}
 }
 
 func sameMethods(got, want []string) bool {
@@ -168,4 +173,80 @@ func sameMethods(got, want []string) bool {
 		}
 	}
 	return true
+}
+
+func TestOnCompleteMetricsPairLifecycleAndTerminalSession(t *testing.T) {
+	beads, lander, runner := &fakeBeads{}, &fakeLander{}, &fakeRunner{}
+	dispatcher := outcomeDispatcher(t, beads, lander, runner, &fakeGate{})
+	clock := dispatcher.clock.(*manualClock)
+	dispatcher.Add(outcomeSession("metrics", Implementer))
+	clock.Advance(2 * time.Second)
+
+	dispatcher.OnComplete(context.Background(), "metrics", Completed)
+
+	snapshot := dispatcher.metrics.(*metrics.Registry).Snapshot()
+	if snapshot.Lifecycle[metrics.LifecycleComplete] != 1 || snapshot.Lifecycle[metrics.LifecycleLand] != 1 || snapshot.Lifecycle[metrics.LifecycleClose] != 1 || snapshot.Land[metrics.LandOK] != 1 {
+		t.Fatalf("lifecycle metrics = %#v, land = %#v", snapshot.Lifecycle, snapshot.Land)
+	}
+	if got, want := snapshot.Sessions, (metrics.SessionGauges{Peak: 1, Completed: 1}); got != want {
+		t.Fatalf("session gauges = %#v, want %#v", got, want)
+	}
+	if got, want := snapshot.Roles[metrics.RoleImplementer], (metrics.RoleTotal{Sessions: 1, Duration: 2 * time.Second}); got != want {
+		t.Fatalf("implementer total = %#v, want %#v", got, want)
+	}
+}
+
+func TestOnCompleteMetricsDistinguishLandFailures(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		result LandResult
+		key    string
+	}{
+		{"conflict", LandConflict, metrics.LandConflict},
+		{"gate failure", LandGateFailed, metrics.LandGateFailed},
+		{"failure", LandFailed, metrics.LandFailed},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			lander := &fakeLander{land: func(context.Context, repo.Repo, string, Stamp) (LandResult, error) { return test.result, nil }}
+			dispatcher := outcomeDispatcher(t, &fakeBeads{}, lander, &fakeRunner{}, &fakeGate{})
+			dispatcher.Add(outcomeSession(test.name, Implementer))
+
+			dispatcher.OnComplete(context.Background(), test.name, Completed)
+
+			snapshot := dispatcher.metrics.(*metrics.Registry).Snapshot()
+			if snapshot.Lifecycle[metrics.LifecycleLand] != 1 || snapshot.Land[test.key] != 1 {
+				t.Fatalf("metrics = %#v", snapshot)
+			}
+		})
+	}
+}
+
+func TestOnCompleteMetricsReviewVerdictAndFailure(t *testing.T) {
+	t.Run("review", func(t *testing.T) {
+		dispatcher := outcomeDispatcher(t, &fakeBeads{}, &fakeLander{}, &fakeRunner{}, &fakeGate{})
+		dispatcher.Add(outcomeSession("review-metrics", Reviewer))
+		dispatcher.OnComplete(context.Background(), "review-metrics", Completed)
+		if got := dispatcher.metrics.(*metrics.Registry).Snapshot().Lifecycle[metrics.LifecycleReview]; got != 1 {
+			t.Fatalf("review metrics = %d, want 1", got)
+		}
+	})
+	t.Run("verdict", func(t *testing.T) {
+		dispatcher := outcomeDispatcher(t, &fakeBeads{}, &fakeLander{}, &fakeRunner{}, &fakeGate{})
+		session := outcomeSession("verdict-metrics", Designer)
+		session.Decomposition = true
+		dispatcher.Add(session)
+		dispatcher.OnComplete(context.Background(), "verdict-metrics", Completed)
+		if got := dispatcher.metrics.(*metrics.Registry).Snapshot().Lifecycle[metrics.LifecycleVerdict]; got != 1 {
+			t.Fatalf("verdict metrics = %d, want 1", got)
+		}
+	})
+	t.Run("failed", func(t *testing.T) {
+		dispatcher := outcomeDispatcher(t, &fakeBeads{}, &fakeLander{}, &fakeRunner{}, &fakeGate{})
+		dispatcher.Add(outcomeSession("failed-metrics", Implementer))
+		dispatcher.OnComplete(context.Background(), "failed-metrics", Failed)
+		snapshot := dispatcher.metrics.(*metrics.Registry).Snapshot()
+		if snapshot.Lifecycle[metrics.LifecycleError] != 1 || snapshot.Sessions.Failed != 1 {
+			t.Fatalf("failure metrics = %#v", snapshot)
+		}
+	})
 }
